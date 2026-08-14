@@ -257,19 +257,23 @@ const REFUND_POINTS=[
    fills[] = containers currently in each rack (0–6). */
 const nowEpoch=()=>Math.floor(Date.now()/1000);
 const UNIT_CAP=6;
-function mkFills(n,total){ /* deterministic: racks nearest the gate fill to the brim first */
- const f=Array(n).fill(0); let r=Math.min(total,n*UNIT_CAP);
- for(let i=0;i<n&&r>0;i++){ f[i]=Math.min(i%3===2?3:UNIT_CAP,r); r-=f[i]; }
- for(let i=0;i<n&&r>0;i++){ const add=Math.min(UNIT_CAP-f[i],r); f[i]+=add; r-=add; }
+function mkFills(n,total){ /* deterministic even spread — units are emptied
+   often, so racks RARELY sit full; fills differ by at most one, with a
+   single popular rack per site allowed to run ahead */
+ const f=Array(n).fill(0);
+ const order=[...Array(n).keys()].sort((a,b)=>((a*7+3)%n)-((b*7+3)%n));
+ let r=Math.min(total,n*UNIT_CAP),i=0;
+ while(r>0){const idx=order[i%n];if(f[idx]<UNIT_CAP){f[idx]++;r--;}i++;}
+ if(n>4&&f[0]<UNIT_CAP-1){const from=f.indexOf(Math.min(...f));if(from!==0&&f[from]>0){f[0]++;f[from]--;}}
  return f;
 }
 const SITES=[
- {id:"s1",host:"Sandy Bay Cricket Club",   area:"Sandy Bay",  hostEmoji:"🏏", unitCount:20, fills:mkFills(20,87), addedToday:34, sick:0, epoch:nowEpoch()-4*60,  km:1.2, x:48,y:63, rel:"claimed", lastEmptied:"Tue 5 Aug", installed:"Mar 2026", lifetime:11240, stat:{full:34,turn:41,contam:2.1,cycle:2.9}},
- {id:"s2",host:"New Town Bowls Club",      area:"New Town",   hostEmoji:"🎳", unitCount:12, fills:mkFills(12,54), addedToday:18, sick:0, epoch:nowEpoch()-11*60, km:3.4, x:56,y:36, rel:"claimed", lastEmptied:"Thu 7 Aug", installed:"Apr 2026", lifetime:8360,  stat:{full:28,turn:33,contam:3.4,cycle:3.6}},
- {id:"s3",host:"Lindisfarne Scout Hall",   area:"Lindisfarne",hostEmoji:"⚜️", unitCount:8,  fills:mkFills(8,41),  addedToday:12, sick:0, epoch:nowEpoch()-7*60,  km:5.1, x:88,y:30, rel:"watched", lastEmptied:"Wed 6 Aug", installed:"May 2026", lifetime:5210,  stat:{full:22,turn:38,contam:1.8,cycle:3.1}},
- {id:"s4",host:"Hobart Men's Shed, Moonah",area:"Moonah",     hostEmoji:"🔨", unitCount:6,  fills:mkFills(6,22),  addedToday:8,  sick:0, epoch:nowEpoch()-19*60, km:4.6, x:39,y:22, rel:"claimed", lastEmptied:"Fri 8 Aug", installed:"Mar 2026", lifetime:9870,  stat:{full:18,turn:27,contam:5.2,cycle:4.4}},
- {id:"s5",host:"Taroona High School",      area:"Taroona",    hostEmoji:"🎓", unitCount:10, fills:mkFills(10,31), addedToday:5,  sick:1, epoch:nowEpoch()-42*60, km:3.9, x:19,y:31, rel:"watched", lastEmptied:"Mon 4 Aug", installed:"Jun 2026", lifetime:3105,  stat:{full:41,turn:22,contam:2.7,cycle:5.8}},
- {id:"s6",host:"Kingston Beach Surf Club", area:"Kingston",   hostEmoji:"🏄", unitCount:4,  fills:mkFills(4,9),   addedToday:4,  sick:0, epoch:nowEpoch()-25*60, km:9.8, x:27,y:79, rel:"watched", lastEmptied:"Sat 9 Aug", installed:"Jul 2026", lifetime:2130,  stat:{full:12,turn:19,contam:4.1,cycle:6.5}}
+ {id:"s1",host:"Sandy Bay Cricket Club",   area:"Sandy Bay",  hostEmoji:"🏏", unitCount:20, fills:mkFills(20,52), addedToday:21, sick:0, epoch:nowEpoch()-4*60,  km:1.2, x:48,y:63, rel:"claimed", lastEmptied:"Tue 5 Aug", installed:"Mar 2026", lifetime:11240, stat:{full:6,turn:41,contam:2.1,cycle:2.9}},
+ {id:"s2",host:"New Town Bowls Club",      area:"New Town",   hostEmoji:"🎳", unitCount:12, fills:mkFills(12,31), addedToday:13, sick:0, epoch:nowEpoch()-11*60, km:3.4, x:56,y:36, rel:"claimed", lastEmptied:"Thu 7 Aug", installed:"Apr 2026", lifetime:8360,  stat:{full:5,turn:33,contam:3.4,cycle:3.6}},
+ {id:"s3",host:"Lindisfarne Scout Hall",   area:"Lindisfarne",hostEmoji:"⚜️", unitCount:8,  fills:mkFills(8,26),  addedToday:9, sick:0, epoch:nowEpoch()-7*60,  km:5.1, x:88,y:30, rel:"watched", lastEmptied:"Wed 6 Aug", installed:"May 2026", lifetime:5210,  stat:{full:4,turn:38,contam:1.8,cycle:3.1}},
+ {id:"s4",host:"Hobart Men's Shed, Moonah",area:"Moonah",     hostEmoji:"🔨", unitCount:6,  fills:mkFills(6,14),  addedToday:6,  sick:0, epoch:nowEpoch()-19*60, km:4.6, x:39,y:22, rel:"claimed", lastEmptied:"Fri 8 Aug", installed:"Mar 2026", lifetime:9870,  stat:{full:3,turn:27,contam:5.2,cycle:4.4}},
+ {id:"s5",host:"Taroona High School",      area:"Taroona",    hostEmoji:"🎓", unitCount:10, fills:mkFills(10,24), addedToday:5,  sick:1, epoch:nowEpoch()-42*60, km:3.9, x:19,y:31, rel:"watched", lastEmptied:"Mon 4 Aug", installed:"Jun 2026", lifetime:3105,  stat:{full:12,turn:22,contam:2.7,cycle:5.8}},
+ {id:"s6",host:"Kingston Beach Surf Club", area:"Kingston",   hostEmoji:"🏄", unitCount:4,  fills:mkFills(4,6),   addedToday:4,  sick:0, epoch:nowEpoch()-25*60, km:9.8, x:27,y:79, rel:"watched", lastEmptied:"Sat 9 Aug", installed:"Jul 2026", lifetime:2130,  stat:{full:2,turn:19,contam:4.1,cycle:6.5}}
 ];
 /* CDS analytics feed (mock; server-side aggregation in production).
    RVM feed = containers cashed through each machine via Bin Bypass
@@ -384,12 +388,12 @@ const Store={
    cdsMetric:"full",                       /* full | turn | contam */
    obSlide:0,
    history:[
-     {date:"Sun 10 Aug",units:2,count:118,cents:1180,dest:"Queens Walk Oval RVM"},
-     {date:"Thu 7 Aug", units:3,count:176,cents:1760,dest:"Eastlands RVM"},
-     {date:"Sat 12 Jul",units:4,count:231,cents:2310,dest:"Eastlands RVM",best:true},
-     {date:"Tue 1 Jul", units:2,count:98, cents:980, dest:"Queens Walk Oval RVM"}
+     {date:"Sun 10 Aug",units:2,count:87,cents:870,dest:"Queens Walk Oval RVM"},
+     {date:"Thu 7 Aug", units:3,count:121,cents:1210,dest:"Eastlands RVM"},
+     {date:"Sat 12 Jul",units:4,count:156,cents:1560,dest:"Eastlands RVM",best:true},
+     {date:"Tue 1 Jul", units:2,count:64, cents:640, dest:"Queens Walk Oval RVM"}
    ],
-   monthly:[{m:"Mar",c:4210},{m:"Apr",c:6840},{m:"May",c:8100},{m:"Jun",c:9960},{m:"Jul",c:12230},{m:"Aug",c:9640}]
+   monthly:[{m:"Mar",c:2210},{m:"Apr",c:3840},{m:"May",c:4600},{m:"Jun",c:5460},{m:"Jul",c:6730},{m:"Aug",c:5140}]
  },
  set(patch){Object.assign(this.state,patch);render();},
  go(name,params={}){ /* push */
@@ -471,9 +475,9 @@ Views.onboarding=()=>{
     <text x="138" y="129" text-anchor="middle" font-size="21" font-weight="800" fill="var(--green-ink-on)">10c</text></svg>`,
   `<div style="width:200px;height:200px;border-radius:28px;background:var(--map-land);position:relative;overflow:hidden;border:1px solid var(--s-line)">
     <svg viewBox="0 0 210 210" style="position:absolute;inset:0"><path d="M150 0 C140 60 160 120 150 210 L210 210 L210 0 Z" fill="var(--map-water)"/><path d="M0 80 C60 72 110 86 150 78" stroke="var(--map-road)" stroke-width="5" fill="none"/><path d="M70 0 C76 80 62 150 78 210" stroke="var(--map-road)" stroke-width="5" fill="none"/></svg>
-    <div class="pin-u" style="left:30%;top:40%"><div class="b">54</div><div class="tip"></div></div>
-    <div class="pin-u" style="left:62%;top:68%"><div class="b">87</div><div class="tip"></div></div>
-    <div class="pin-u stale" style="left:72%;top:28%"><div class="b">31</div><div class="tip"></div></div></div>`,
+    <div class="pin-u" style="left:30%;top:40%"><div class="b">31</div><div class="tip"></div></div>
+    <div class="pin-u" style="left:62%;top:68%"><div class="b">52</div><div class="tip"></div></div>
+    <div class="pin-u stale" style="left:72%;top:28%"><div class="b">24</div><div class="tip"></div></div></div>`,
   `<svg viewBox="0 0 200 190" style="width:180px">
     <rect x="48" y="18" width="104" height="150" rx="12" fill="var(--blue-tint)" stroke="var(--blue)" stroke-width="2.5"/>
     <circle cx="100" cy="70" r="24" fill="var(--blue)"/><circle cx="100" cy="70" r="15" fill="var(--s-bg)"/>
@@ -509,7 +513,7 @@ function pinHtmlRP(r){
 }
 Views.map=(p)=>{
  const f=Store.state.filters;
- const showS=SITES.filter(s=>f.units&&(!f.worth||val(s)>=6));
+ const showS=SITES.filter(s=>f.units&&(!f.worth||val(s)>=3));
  const showR=REFUND_POINTS.filter(r=>r.x!==undefined&&((r.type==="RVM"&&f.rvm)||(r.type==="Depot"&&f.depot))&&(!f.open||isOpen(r)));
  setTimeout(()=>{ /* after DOM lands, mount Google base if a key is set */
    const el=$("gmap"); if(!el)return;
@@ -917,7 +921,7 @@ Views.refundlist=()=>{
 /* ---- CDS insights (scheme analytics) ---- */
 const CDS_METRICS={
  full:  {label:"% of time units are full", unit:"%",  key:"full",   betterHigh:false,
-         note:"Time spent full is money waiting on a fence. Taroona sits full 41% of the week — it needs more racks or a second collector."},
+         note:"Racks rarely sit full because collectors clear them fast. Taroona is the outlier at 12% of the week — it needs a second collector."},
  turn:  {label:"Total containers turned per unit", unit:"/wk", key:"turn", betterHigh:true,
          note:"Containers through each rack per week. Sandy Bay's racks turn 41 containers a week each — the network's benchmark."},
  contam:{label:"Likely contamination ratio", unit:"%", key:"contam", betterHigh:false,
@@ -972,7 +976,7 @@ Views.cds=()=>{
         <div style="display:flex;gap:11px;align-items:center;min-width:0">
           <div class="stepn" style="${i>0?'background:var(--s-bg);color:var(--s-muted);border:1px solid var(--s-line)':''}">${i+1}</div>
           <div style="min-width:0"><div style="font-size:14px;font-weight:700">${s.host}</div>
-          <div style="font-size:11.5px;color:var(--s-muted);margin-top:2px">fills every ${s.stat.cycle} days · ${Math.round(30/s.stat.cycle)} turns/month</div></div>
+          <div style="font-size:11.5px;color:var(--s-muted);margin-top:2px">turned every ${s.stat.cycle} days · ${Math.round(30/s.stat.cycle)} turns/month</div></div>
         </div>
         <div style="font-size:12.5px;font-weight:800;color:var(--green)">${s.stat.cycle}d</div>
       </div>`).join("")}
