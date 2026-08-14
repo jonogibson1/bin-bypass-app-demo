@@ -268,12 +268,12 @@ function mkFills(n,total){ /* deterministic even spread — units are emptied
  return f;
 }
 const SITES=[
- {id:"s1",host:"Sandy Bay Cricket Club",   area:"Sandy Bay",  hostEmoji:"🏏", unitCount:20, fills:mkFills(20,52), addedToday:48, sick:0, epoch:nowEpoch()-4*60,  km:1.2, x:48,y:63, rel:"claimed", lastEmptied:"Tue 5 Aug", installed:"Mar 2026", lifetime:11240, stat:{full:6,turn:6.4,contam:2.1,cycle:1.1}},
- {id:"s2",host:"New Town Bowls Club",      area:"New Town",   hostEmoji:"🎳", unitCount:12, fills:mkFills(12,31), addedToday:29, sick:0, epoch:nowEpoch()-11*60, km:3.4, x:56,y:36, rel:"claimed", lastEmptied:"Thu 7 Aug", installed:"Apr 2026", lifetime:8360,  stat:{full:5,turn:5.8,contam:3.4,cycle:1.6}},
- {id:"s3",host:"Lindisfarne Scout Hall",   area:"Lindisfarne",hostEmoji:"⚜️", unitCount:8,  fills:mkFills(8,26),  addedToday:19, sick:0, epoch:nowEpoch()-7*60,  km:5.1, x:88,y:30, rel:"watched", lastEmptied:"Wed 6 Aug", installed:"May 2026", lifetime:5210,  stat:{full:4,turn:6.1,contam:1.8,cycle:1.4}},
- {id:"s4",host:"Hobart Men's Shed, Moonah",area:"Moonah",     hostEmoji:"🔨", unitCount:6,  fills:mkFills(6,14),  addedToday:14,  sick:0, epoch:nowEpoch()-19*60, km:4.6, x:39,y:22, rel:"claimed", lastEmptied:"Fri 8 Aug", installed:"Mar 2026", lifetime:9870,  stat:{full:3,turn:5.2,contam:5.2,cycle:2.2}},
- {id:"s5",host:"Taroona High School",      area:"Taroona",    hostEmoji:"🎓", unitCount:10, fills:mkFills(10,24), addedToday:8,  sick:1, epoch:nowEpoch()-42*60, km:3.9, x:19,y:31, rel:"watched", lastEmptied:"Mon 4 Aug", installed:"Jun 2026", lifetime:3105,  stat:{full:12,turn:3.1,contam:2.7,cycle:4.6}},
- {id:"s6",host:"Kingston Beach Surf Club", area:"Kingston",   hostEmoji:"🏄", unitCount:4,  fills:mkFills(4,6),   addedToday:9,  sick:0, epoch:nowEpoch()-25*60, km:9.8, x:27,y:79, rel:"watched", lastEmptied:"Sat 9 Aug", installed:"Jul 2026", lifetime:2130,  stat:{full:2,turn:4.4,contam:4.1,cycle:3.1}}
+ {id:"s1",host:"Sandy Bay Cricket Club",   area:"Sandy Bay",  hostEmoji:"🏏", unitCount:20, fills:mkFills(20,52), addedToday:48, sick:0, epoch:nowEpoch()-4*60,  km:1.2, x:48,y:63, saved:true, lastEmptied:"Tue 5 Aug", installed:"Mar 2026", lifetime:11240, stat:{full:6,turn:6.4,contam:2.1,cycle:1.1}},
+ {id:"s2",host:"New Town Bowls Club",      area:"New Town",   hostEmoji:"🎳", unitCount:12, fills:mkFills(12,31), addedToday:29, sick:0, epoch:nowEpoch()-11*60, km:3.4, x:56,y:36, saved:true, lastEmptied:"Thu 7 Aug", installed:"Apr 2026", lifetime:8360,  stat:{full:5,turn:5.8,contam:3.4,cycle:1.6}},
+ {id:"s3",host:"Lindisfarne Scout Hall",   area:"Lindisfarne",hostEmoji:"⚜️", unitCount:8,  fills:mkFills(8,26),  addedToday:19, sick:0, epoch:nowEpoch()-7*60,  km:5.1, x:88,y:30, saved:false, lastEmptied:"Wed 6 Aug", installed:"May 2026", lifetime:5210,  stat:{full:4,turn:6.1,contam:1.8,cycle:1.4}},
+ {id:"s4",host:"Hobart Men's Shed, Moonah",area:"Moonah",     hostEmoji:"🔨", unitCount:6,  fills:mkFills(6,14),  addedToday:14,  sick:0, epoch:nowEpoch()-19*60, km:4.6, x:39,y:22, saved:true, lastEmptied:"Fri 8 Aug", installed:"Mar 2026", lifetime:9870,  stat:{full:3,turn:5.2,contam:5.2,cycle:2.2}},
+ {id:"s5",host:"Taroona High School",      area:"Taroona",    hostEmoji:"🎓", unitCount:10, fills:mkFills(10,24), addedToday:8,  sick:1, epoch:nowEpoch()-42*60, km:3.9, x:19,y:31, saved:false, lastEmptied:"Mon 4 Aug", installed:"Jun 2026", lifetime:3105,  stat:{full:12,turn:3.1,contam:2.7,cycle:4.6}},
+ {id:"s6",host:"Kingston Beach Surf Club", area:"Kingston",   hostEmoji:"🏄", unitCount:4,  fills:mkFills(4,6),   addedToday:9,  sick:0, epoch:nowEpoch()-25*60, km:9.8, x:27,y:79, saved:false, lastEmptied:"Sat 9 Aug", installed:"Jul 2026", lifetime:2130,  stat:{full:2,turn:4.4,contam:4.1,cycle:3.1}}
 ];
 /* CDS analytics (mock; server-side aggregation in production).
    The scheme does NOT share RVM-side data — cash-in stats come from
@@ -386,7 +386,6 @@ const Store={
    filters:{units:true,rvm:true,depot:true,open:false,worth:false},
    mode:"walk",
    runSel:null,
-   account:"personal",                     /* personal | charity framing */
    cdsMetric:"full",                       /* full | turn | contam */
    unitsCollectedMonth:912,                /* rack-empties across the network */
    obSlide:0,
@@ -448,7 +447,7 @@ function tabbar(){
   <div class="tab ${t==='map'?'on':''}" onclick="Store.tabTo('map')">${I.map}Map</div>
   <div class="tab ${t==='value'?'on':''}" onclick="Store.tabTo('value')">${I.val}Value</div>
   <div class="tab ${t==='cds'?'on':''}" onclick="Store.tabTo('cds')">${I.chart}CDS</div>
-  <div class="tab ${t==='myunits'?'on':''}" onclick="Store.tabTo('myunits')">${I.units}My sites</div>
+  <div class="tab ${t==='myunits'?'on':''}" onclick="Store.tabTo('myunits')">${I.units}Saved</div>
  </div>`;
 }
 const themeBtn=()=>`<div class="iconbtn" onclick="toggleTheme()">${I.moon}</div>`;
@@ -608,7 +607,7 @@ Views.value=()=>{
     <div style="font-size:13.5px;color:var(--s-muted);margin-top:4px">across <b style="color:var(--s-ink)">${SITES.filter(s=>ready(s)>0).length} sites</b> · <span id="hero-n">${totalCount()}</span> containers · live</div>
     <div class="cta" style="margin-top:13px;padding:14px" onclick="Store.go('run')">Build a run →</div>
   </div>
-  <div class="row" style="margin:13px 2px 7px"><div class="k">Your sites · nearest first</div>
+  <div class="row" style="margin:13px 2px 7px"><div class="k">Nearby sites · nearest first</div>
     <div style="font-size:12px;font-weight:700;color:var(--green);cursor:pointer" onclick="Store.go('history')">History →</div></div>
   <div class="card" style="border-radius:16px;overflow:hidden">
   ${[...SITES].sort((a,b)=>a.km-b.km).map(s=>`
@@ -626,9 +625,9 @@ Views.value=()=>{
  ${tabbar()}`;
 };
 
-/* ---- My sites ---- */
+/* ---- Saved sites (stored on this phone — the app has no accounts) ---- */
 Views.myunits=()=>{
- const claimed=SITES.filter(s=>s.rel==="claimed"), watched=SITES.filter(s=>s.rel==="watched");
+ const saved=SITES.filter(s=>s.saved), other=SITES.filter(s=>!s.saved);
  const row=s=>`
    <div class="urow" onclick="Store.go('unit',{id:'${s.id}'})">
      <div style="display:flex;gap:11px;align-items:center;min-width:0">
@@ -640,12 +639,12 @@ Views.myunits=()=>{
    </div>`;
  return `
  <div class="sbspace"></div>
- <div class="apphead"><div class="t">My sites</div>${themeBtn()}</div>
+ <div class="apphead"><div class="t">Saved sites</div>${themeBtn()}</div>
  <div class="scroll">
-  <div class="k" style="margin:4px 2px 7px">Claimed · you're the collector</div>
-  <div class="card" style="border-radius:16px;overflow:hidden">${claimed.map(row).join("")}</div>
-  <div class="k" style="margin:16px 2px 7px">Watching</div>
-  <div class="card" style="border-radius:16px;overflow:hidden">${watched.map(row).join("")}</div>
+  <div class="k" style="margin:4px 2px 7px">Saved on this phone · no account needed</div>
+  <div class="card" style="border-radius:16px;overflow:hidden">${saved.map(row).join("")||'<div style="padding:18px;text-align:center;color:var(--s-muted);font-size:13px">Nothing saved yet</div>'}</div>
+  <div class="k" style="margin:16px 2px 7px">Nearby</div>
+  <div class="card" style="border-radius:16px;overflow:hidden">${other.map(row).join("")}</div>
   <div style="display:flex;gap:9px;align-items:center;margin-top:13px;padding:11px 13px;border:1.5px dashed var(--s-line);border-radius:13px;cursor:pointer" onclick="addSiteModal()">
     <div style="width:22px;height:22px;border-radius:50%;border:2px solid var(--s-muted);display:grid;place-items:center;color:var(--s-muted);font-weight:800;font-size:13px">+</div>
     <div style="font-size:12.5px;color:var(--s-muted)">Add a site — enter a location or unit number</div>
@@ -668,7 +667,7 @@ function addSiteLookup(){
  if(!q){toast("Type a location or unit number");return;}
  const hit=SITES.find(s=>s.host.toLowerCase().includes(q));
  closeModal();
- if(hit){hit.rel=hit.rel==="claimed"?"claimed":"watched";toast("Watching "+hit.host);Store.go("unit",{id:hit.id});}
+ if(hit){hit.saved=true;toast("Saved "+hit.host);Store.go("unit",{id:hit.id});}
  else if(/^\d+$/.test(q.replace(/^unit\s*/,""))){toast("Unit "+q.replace(/^unit\s*/,"")+" isn't on the network yet (demo)");}
  else toast("No site matches “"+q+"” (demo)");
 }
@@ -689,14 +688,14 @@ function spark(s){
 }
 Views.unit=(p)=>{
  const s=SITES.find(x=>x.id===p.id);
- const claimed=s.rel==="claimed";
+ const sv=s.saved;
  const ok=s.unitCount-s.sick;
  return `
  <div class="sbspace"></div>
  <div class="apphead">
    <div class="back" onclick="Store.back()">${I.back}
      <div style="min-width:0"><div class="t" style="font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.host}</div>
-     <div style="font-size:12px;color:var(--s-muted)">${s.unitCount} units · <span class="badge ${claimed?'live':'grey'}" style="font-size:10.5px;padding:2px 7px">${claimed?"You collect this site":"Watching"}</span></div></div>
+     <div style="font-size:12px;color:var(--s-muted)">${s.unitCount} units · <span class="badge ${sv?'live':'grey'}" style="font-size:10.5px;padding:2px 7px">${sv?"Saved":"Not saved"}</span></div></div>
    </div>${themeBtn()}
  </div>
  <div class="scroll">
@@ -721,36 +720,21 @@ Views.unit=(p)=>{
       <div><div style="font-size:14px;font-weight:700">${s.sick===0?"All units healthy":ok+" of "+s.unitCount+" units healthy"}</div><div style="font-size:11.5px;color:var(--s-muted)">${s.sick===0?"Solar charged · strong signal":"We've been notified — nothing for you to do"}</div></div>
     </div>
     <div class="hr" style="margin:11px 0"></div>
-    <div class="row" style="font-size:13px"><span style="color:var(--s-muted)">Last emptied</span><b>${s.lastEmptied}${claimed?" · by you":""}</b></div>
+    <div class="row" style="font-size:13px"><span style="color:var(--s-muted)">Last emptied</span><b>${s.lastEmptied} · detected automatically</b></div>
     <div class="row" style="font-size:13px;margin-top:8px"><span style="color:var(--s-muted)">Host</span><b>${s.host} ${s.hostEmoji}</b></div>
     <div class="row" style="font-size:13px;margin-top:8px"><span style="color:var(--s-muted)">On the fence since</span><b>${s.installed}</b></div>
   </div>
   <div style="display:flex;gap:9px;margin-top:12px">
     <div class="cta" style="flex:1.4;padding:13px;font-size:14px" onclick="toast('Handing off to Google Maps')">Directions · ${s.km} km</div>
-    <div class="cta sub ${ready(s)?'':'dis'}" style="flex:1;padding:13px;font-size:14px" onclick="confirmEmpty('${s.id}')">Mark emptied</div>
+    <div class="cta sub" style="flex:1;padding:13px;font-size:14px" onclick="toggleSave('${s.id}')">${sv?"Remove from saved":"Save site"}</div>
   </div>
   <div style="display:flex;gap:9px;margin-top:9px">
-    <div class="cta sub" style="flex:1;padding:12px;font-size:13.5px" onclick="toggleRel('${s.id}')">${claimed?"Release claim":"Claim this site"}</div>
     <div class="cta sub" style="flex:1;padding:12px;font-size:13.5px;display:flex;gap:7px" onclick="Store.go('hostcard',{id:'${s.id}'})">${I.share} Host impact card</div>
   </div>
  </div>
  ${tabbar()}`;
 };
-function toggleRel(id){const s=SITES.find(x=>x.id===id);s.rel=s.rel==="claimed"?"watched":"claimed";toast(s.rel==="claimed"?"Claimed. You're the recognised collector.":"Claim released.");render();}
-function confirmEmpty(id){
- const s=SITES.find(x=>x.id===id);
- modal(`<div style="font-size:16.5px;font-weight:800">Mark ${s.host} emptied?</div>
-  <div style="font-size:13px;color:var(--s-muted);margin-top:6px">${ready(s)} containers (${uval(s)}) move to your run history. All ${s.unitCount} racks reset to zero.</div>
-  <div style="display:flex;gap:9px;margin-top:14px">
-    <div class="cta" style="flex:1;padding:12px;font-size:14px" onclick="doEmpty('${s.id}')">Yes, emptied it</div>
-    <div class="cta sub" style="flex:1;padding:12px;font-size:14px" onclick="closeModal()">Cancel</div>
-  </div>`);
-}
-function doEmpty(id){
- const s=SITES.find(x=>x.id===id);
- recordCollection([s],"marked emptied");
- closeModal(); toast("Logged. "+s.host+" reset to zero."); render();
-}
+function toggleSave(id){const s=SITES.find(x=>x.id===id);s.saved=!s.saved;toast(s.saved?"Saved to this phone.":"Removed from saved.");render();}
 /* Collection bookkeeping shared by mark-emptied and completed runs */
 function recordCollection(sites,dest){
  const count=sites.reduce((a,s)=>a+ready(s),0);
@@ -997,7 +981,7 @@ Views.cds=()=>{
 
 /* ---- History & impact ---- */
 Views.history=()=>{
- const st=Store.state; const charity=st.account==="charity";
+ const st=Store.state;
  const max=Math.max(...st.monthly.map(m=>m.c));
  const best=st.history.reduce((b,h)=>h.cents>(b?b.cents:0)?h:b,null);
  const lifetime=st.monthly.reduce((s,m)=>s+m.c,0);
@@ -1005,17 +989,13 @@ Views.history=()=>{
  <div class="sbspace"></div>
  <div class="apphead"><div class="back" onclick="Store.back()">${I.back}<div class="t" style="font-size:19px">History</div></div>${themeBtn()}</div>
  <div class="scroll">
-  <div class="seg" style="margin-bottom:11px">
-    <div class="${charity?'':'on'}" onclick="Store.set({account:'personal'})">You</div>
-    <div class="${charity?'on':''}" onclick="Store.set({account:'charity'})">Sandy Bay Scouts</div>
-  </div>
   <div class="card" style="padding:17px 18px 15px;border-radius:20px;background:linear-gradient(180deg,var(--green-tint),var(--s-surface) 82%)">
-    <div class="k">${charity?"Raised for Sandy Bay Scouts":"Banked"} · August</div>
+    <div class="k">Banked · August</div>
     <div class="money" style="font-size:40px;line-height:1.08;margin-top:5px">${fmt$(st.monthly[5].c/100)}</div>
-    <div style="font-size:13.5px;color:var(--s-muted);margin-top:4px">${(st.monthly[5].c/10).toLocaleString()} containers · ${st.history.filter(h=>h.date.includes("Aug")).length} runs this month</div>
+    <div style="font-size:13.5px;color:var(--s-muted);margin-top:4px">${(st.monthly[5].c/10).toLocaleString()} containers · ${st.history.filter(h=>h.date.includes("Aug")).length} runs logged on this phone</div>
   </div>
   <div class="card" style="padding:15px 16px 12px;border-radius:18px;margin-top:11px">
-    <div class="row"><div class="k">${charity?"Raised":"Banked"} per month</div><div style="font-size:11.5px;color:var(--s-muted)">Mar – Aug 2026</div></div>
+    <div class="row"><div class="k">Banked per month</div><div style="font-size:11.5px;color:var(--s-muted)">Mar – Aug 2026</div></div>
     <div class="bars">
       ${st.monthly.map((m,i)=>`<div class="bar ${i===5?'cur':''}">${i===5?`<b>${fmt$(m.c/100).replace(/\.\d\d$/,"")}</b>`:""}<i style="height:${Math.round(m.c/max*72)}%"></i><span>${m.m}</span></div>`).join("")}
     </div>
@@ -1024,7 +1004,7 @@ Views.history=()=>{
     <div class="row">
       <div style="display:flex;gap:10px;align-items:center">
         <div style="width:30px;height:30px;border-radius:50%;background:var(--amber-tint);display:grid;place-items:center;font-size:15px">🏅</div>
-        <div><div style="font-size:13.5px;font-weight:700">Personal best run</div><div style="font-size:11.5px;color:var(--s-muted)">${best.date} · ${best.units} units + ${best.dest}</div></div>
+        <div><div style="font-size:13.5px;font-weight:700">Best run</div><div style="font-size:11.5px;color:var(--s-muted)">${best.date} · ${best.units} units + ${best.dest}</div></div>
       </div>
       <div class="money" style="font-size:16px">${fmt$(best.cents/100)}</div>
     </div>
@@ -1069,7 +1049,7 @@ Views.hostcard=(p)=>{
           <div style="font-size:10.5px;opacity:.85;margin-top:2px">raised on their fence</div>
         </div>
       </div>
-      <div style="margin-top:17px;font-size:11.5px;opacity:.8">Collected by ${Store.state.account==='charity'?'Sandy Bay Scouts':'a local collector'} · binbypass.com</div>
+      <div style="margin-top:17px;font-size:11.5px;opacity:.8">Powered by Bin Bypass · binbypass.com</div>
     </div>
   </div>
   <div style="font-size:12px;color:var(--s-muted);text-align:center;margin-top:13px">Shares as an image — clubhouse noticeboards, newsletters, Facebook</div>
