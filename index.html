@@ -268,23 +268,25 @@ function mkFills(n,total){ /* deterministic even spread — units are emptied
  return f;
 }
 const SITES=[
- {id:"s1",host:"Sandy Bay Cricket Club",   area:"Sandy Bay",  hostEmoji:"🏏", unitCount:20, fills:mkFills(20,52), addedToday:21, sick:0, epoch:nowEpoch()-4*60,  km:1.2, x:48,y:63, rel:"claimed", lastEmptied:"Tue 5 Aug", installed:"Mar 2026", lifetime:11240, stat:{full:6,turn:41,contam:2.1,cycle:2.9}},
- {id:"s2",host:"New Town Bowls Club",      area:"New Town",   hostEmoji:"🎳", unitCount:12, fills:mkFills(12,31), addedToday:13, sick:0, epoch:nowEpoch()-11*60, km:3.4, x:56,y:36, rel:"claimed", lastEmptied:"Thu 7 Aug", installed:"Apr 2026", lifetime:8360,  stat:{full:5,turn:33,contam:3.4,cycle:3.6}},
- {id:"s3",host:"Lindisfarne Scout Hall",   area:"Lindisfarne",hostEmoji:"⚜️", unitCount:8,  fills:mkFills(8,26),  addedToday:9, sick:0, epoch:nowEpoch()-7*60,  km:5.1, x:88,y:30, rel:"watched", lastEmptied:"Wed 6 Aug", installed:"May 2026", lifetime:5210,  stat:{full:4,turn:38,contam:1.8,cycle:3.1}},
- {id:"s4",host:"Hobart Men's Shed, Moonah",area:"Moonah",     hostEmoji:"🔨", unitCount:6,  fills:mkFills(6,14),  addedToday:6,  sick:0, epoch:nowEpoch()-19*60, km:4.6, x:39,y:22, rel:"claimed", lastEmptied:"Fri 8 Aug", installed:"Mar 2026", lifetime:9870,  stat:{full:3,turn:27,contam:5.2,cycle:4.4}},
- {id:"s5",host:"Taroona High School",      area:"Taroona",    hostEmoji:"🎓", unitCount:10, fills:mkFills(10,24), addedToday:5,  sick:1, epoch:nowEpoch()-42*60, km:3.9, x:19,y:31, rel:"watched", lastEmptied:"Mon 4 Aug", installed:"Jun 2026", lifetime:3105,  stat:{full:12,turn:22,contam:2.7,cycle:5.8}},
- {id:"s6",host:"Kingston Beach Surf Club", area:"Kingston",   hostEmoji:"🏄", unitCount:4,  fills:mkFills(4,6),   addedToday:4,  sick:0, epoch:nowEpoch()-25*60, km:9.8, x:27,y:79, rel:"watched", lastEmptied:"Sat 9 Aug", installed:"Jul 2026", lifetime:2130,  stat:{full:2,turn:19,contam:4.1,cycle:6.5}}
+ {id:"s1",host:"Sandy Bay Cricket Club",   area:"Sandy Bay",  hostEmoji:"🏏", unitCount:20, fills:mkFills(20,52), addedToday:48, sick:0, epoch:nowEpoch()-4*60,  km:1.2, x:48,y:63, rel:"claimed", lastEmptied:"Tue 5 Aug", installed:"Mar 2026", lifetime:11240, stat:{full:6,turn:6.4,contam:2.1,cycle:1.1}},
+ {id:"s2",host:"New Town Bowls Club",      area:"New Town",   hostEmoji:"🎳", unitCount:12, fills:mkFills(12,31), addedToday:29, sick:0, epoch:nowEpoch()-11*60, km:3.4, x:56,y:36, rel:"claimed", lastEmptied:"Thu 7 Aug", installed:"Apr 2026", lifetime:8360,  stat:{full:5,turn:5.8,contam:3.4,cycle:1.6}},
+ {id:"s3",host:"Lindisfarne Scout Hall",   area:"Lindisfarne",hostEmoji:"⚜️", unitCount:8,  fills:mkFills(8,26),  addedToday:19, sick:0, epoch:nowEpoch()-7*60,  km:5.1, x:88,y:30, rel:"watched", lastEmptied:"Wed 6 Aug", installed:"May 2026", lifetime:5210,  stat:{full:4,turn:6.1,contam:1.8,cycle:1.4}},
+ {id:"s4",host:"Hobart Men's Shed, Moonah",area:"Moonah",     hostEmoji:"🔨", unitCount:6,  fills:mkFills(6,14),  addedToday:14,  sick:0, epoch:nowEpoch()-19*60, km:4.6, x:39,y:22, rel:"claimed", lastEmptied:"Fri 8 Aug", installed:"Mar 2026", lifetime:9870,  stat:{full:3,turn:5.2,contam:5.2,cycle:2.2}},
+ {id:"s5",host:"Taroona High School",      area:"Taroona",    hostEmoji:"🎓", unitCount:10, fills:mkFills(10,24), addedToday:8,  sick:1, epoch:nowEpoch()-42*60, km:3.9, x:19,y:31, rel:"watched", lastEmptied:"Mon 4 Aug", installed:"Jun 2026", lifetime:3105,  stat:{full:12,turn:3.1,contam:2.7,cycle:4.6}},
+ {id:"s6",host:"Kingston Beach Surf Club", area:"Kingston",   hostEmoji:"🏄", unitCount:4,  fills:mkFills(4,6),   addedToday:9,  sick:0, epoch:nowEpoch()-25*60, km:9.8, x:27,y:79, rel:"watched", lastEmptied:"Sat 9 Aug", installed:"Jul 2026", lifetime:2130,  stat:{full:2,turn:4.4,contam:4.1,cycle:3.1}}
 ];
-/* CDS analytics feed (mock; server-side aggregation in production).
-   RVM feed = containers cashed through each machine via Bin Bypass
-   runs this month. Contamination is a MODELLED estimate from sensor
-   patterns (weight/ToF anomalies), verified at cash-in. */
+/* CDS analytics (mock; server-side aggregation in production).
+   The scheme does NOT share RVM-side data — cash-in stats come from
+   the app's own run logs (which refund point each run ended at).
+   Contamination/sensor error is inferred from the LEFT-BEHIND pattern:
+   a container that stays in its slot while neighbouring slots are
+   emptied. Confirmed at cash-in. */
 const RVM_FEED=[
- {rp:"rp28",month:1840,wk:[380,420,470,570]},
- {rp:"rp13",month:1260,wk:[300,290,330,340]},
- {rp:"rp42",month:730, wk:[150,180,190,210]},
- {rp:"rp18",month:540, wk:[120,130,140,150]},
- {rp:"rp22",month:480, wk:[110,120,130,120]}
+ {rp:"rp28",runs:14,wk:[3,3,4,4]},
+ {rp:"rp13",runs:9, wk:[2,2,2,3]},
+ {rp:"rp42",runs:6, wk:[1,1,2,2]},
+ {rp:"rp18",runs:4, wk:[1,1,1,1]},
+ {rp:"rp22",runs:3, wk:[0,1,1,1]}
 ];
 /* Derived helpers — server-side in production (freshness computed
    at the API so every client agrees; see roadmap Phase 1). */
@@ -386,6 +388,7 @@ const Store={
    runSel:null,
    account:"personal",                     /* personal | charity framing */
    cdsMetric:"full",                       /* full | turn | contam */
+   unitsCollectedMonth:912,                /* rack-empties across the network */
    obSlide:0,
    history:[
      {date:"Sun 10 Aug",units:2,count:87,cents:870,dest:"Queens Walk Oval RVM"},
@@ -393,7 +396,7 @@ const Store={
      {date:"Sat 12 Jul",units:4,count:156,cents:1560,dest:"Eastlands RVM",best:true},
      {date:"Tue 1 Jul", units:2,count:64, cents:640, dest:"Queens Walk Oval RVM"}
    ],
-   monthly:[{m:"Mar",c:2210},{m:"Apr",c:3840},{m:"May",c:4600},{m:"Jun",c:5460},{m:"Jul",c:6730},{m:"Aug",c:5140}]
+   monthly:[{m:"Mar",c:2210},{m:"Apr",c:3840},{m:"May",c:4600},{m:"Jun",c:5460},{m:"Jul",c:6730},{m:"Aug",c:2080}]
  },
  set(patch){Object.assign(this.state,patch);render();},
  go(name,params={}){ /* push */
@@ -672,7 +675,8 @@ function addSiteLookup(){
 
 /* ---- Unit detail ---- */
 function spark(s){
- const seed=ready(s)+s.unitCount; const pts=[]; for(let i=0;i<7;i++){pts.push(8+((seed*(i+3))%29)+(i*2));}
+ const seed=ready(s)+s.unitCount; const base=s.unitCount*5; const pts=[];
+ for(let i=0;i<7;i++){pts.push(Math.max(2,Math.round(base*(0.65+(((seed*(i+3))%13)/22)))));}
  pts[6]=Math.max(s.addedToday,2);
  const max=Math.max(...pts); const xs=pts.map((p,i)=>[8+i*45, 60-((p/max)*44)]);
  return `<svg viewBox="0 0 288 78" style="width:100%;margin-top:8px">
@@ -754,6 +758,7 @@ function recordCollection(sites,dest){
  const d=new Date(); const date=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d.getDay()]+" "+d.getDate()+" "+["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()];
  Store.state.history.unshift({date,units:sites.length,count,cents,dest});
  Store.state.monthly[5].c+=cents;
+ Store.state.unitsCollectedMonth+=sites.reduce((a,s)=>a+s.unitCount,0);
  sites.forEach(s=>{s.fills=Array(s.unitCount).fill(0);s.addedToday=0;s.epoch=nowEpoch();s.lastEmptied=date;});
 }
 /* ---- Run builder ---- */
@@ -922,10 +927,10 @@ Views.refundlist=()=>{
 const CDS_METRICS={
  full:  {label:"% of time units are full", unit:"%",  key:"full",   betterHigh:false,
          note:"Racks rarely sit full because collectors clear them fast. Taroona is the outlier at 12% of the week — it needs a second collector."},
- turn:  {label:"Total containers turned per unit", unit:"/wk", key:"turn", betterHigh:true,
-         note:"Containers through each rack per week. Sandy Bay's racks turn 41 containers a week each — the network's benchmark."},
- contam:{label:"Likely contamination ratio", unit:"%", key:"contam", betterHigh:false,
-         note:"Modelled from sensor patterns (weight and optics anomalies), verified at cash-in. Moonah's 5.2% is worth a bin-signage fix."}
+ turn:  {label:"Total containers turned per unit", unit:"/day", key:"turn", betterHigh:true,
+         note:"Containers through each rack per day. Most racks turn about six containers daily; Sandy Bay's 6.4 sets the network benchmark."},
+ contam:{label:"Likely contamination or sensor error", unit:"%", key:"contam", betterHigh:false,
+         note:"Flagged when a container sits in a slot while the slots around it are emptied — collectors leave behind what the refund point won't take. Moonah's 5.2% is worth a bin-signage fix."}
 };
 Views.cds=()=>{
  const mk=Store.state.cdsMetric, M=CDS_METRICS[mk];
@@ -933,8 +938,8 @@ Views.cds=()=>{
  const ranked=M.betterHigh?rows:[...rows].reverse();           /* chart order: biggest bar first */
  const best=M.betterHigh?ranked[0]:ranked[ranked.length-1];    /* best performer for the callout */
  const maxV=Math.max(...SITES.map(s=>s.stat[M.key]));
- const feedMax=Math.max(...RVM_FEED.map(f=>f.month));
- const feedTotal=RVM_FEED.reduce((a,f)=>a+f.month,0);
+ const feedMax=Math.max(...RVM_FEED.map(f=>f.runs));
+ const feedTotal=RVM_FEED.reduce((a,f)=>a+f.runs,0);
  const cycles=[...SITES].sort((a,b)=>a.stat.cycle-b.stat.cycle);
  const netFull=Math.round(SITES.reduce((a,s)=>a+s.stat.full*s.unitCount,0)/SITES.reduce((a,s)=>a+s.unitCount,0));
  return `
@@ -942,7 +947,7 @@ Views.cds=()=>{
  <div class="apphead"><div class="t">CDS insights</div>${themeBtn()}</div>
  <div class="scroll">
   <div style="display:flex;gap:8px">
-    <div class="card" style="flex:1;padding:11px 12px;border-radius:14px"><div class="money" style="font-size:19px">${feedTotal.toLocaleString()}</div><div style="font-size:10.5px;color:var(--s-muted);margin-top:2px">containers fed to RVMs this month</div></div>
+    <div class="card" style="flex:1;padding:11px 12px;border-radius:14px"><div class="money" style="font-size:19px">${Store.state.unitsCollectedMonth.toLocaleString()}</div><div style="font-size:10.5px;color:var(--s-muted);margin-top:2px">units collected this month</div></div>
     <div class="card" style="flex:1;padding:11px 12px;border-radius:14px"><div style="font-size:19px;font-weight:800">${SITES.reduce((a,s)=>a+s.unitCount,0)} racks</div><div style="font-size:10.5px;color:var(--s-muted);margin-top:2px">across ${SITES.length} sites · ${netFull}% avg time full</div></div>
   </div>
   <div class="k" style="margin:15px 2px 8px">Site performance</div>
@@ -959,14 +964,18 @@ Views.cds=()=>{
     <div style="font-size:11.5px;color:var(--s-muted);line-height:1.5;border-top:1px solid var(--s-line);padding-top:10px;margin-top:3px">
       <b style="color:var(--s-ink)">Highest performing area: ${best.area}.</b> ${M.note}</div>
   </div>
-  <div class="k" style="margin:15px 2px 8px">RVM feed stats · this month</div>
+  <div style="margin-top:12px;border:1.5px solid var(--amber);background:var(--amber-tint);border-radius:14px;padding:11px 14px">
+    <div style="font-size:13px;font-weight:800;color:var(--amber)">Likely contamination or sensor error at 3% of sites</div>
+    <div style="font-size:11.5px;color:var(--s-muted);margin-top:3px;line-height:1.5">Flagged when a container sits in a slot while the slots around it are emptied. Usually something the refund point won't take; occasionally a sensor misread. Confirmed when the load is cashed in.</div>
+  </div>
+  <div class="k" style="margin:15px 2px 8px">Where runs cash in · this month</div>
   <div class="card" style="padding:14px 16px 8px;border-radius:18px">
     ${RVM_FEED.map(f=>{const r=REFUND_POINTS.find(x=>x.id===f.rp);const up=f.wk[3]>=f.wk[0];return `
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;cursor:pointer" onclick="Store.go('refund',{id:'${f.rp}'})">
         <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.name)}</div>
-          <div style="margin-top:4px" class="fullbar"><i style="width:${Math.round(f.month/feedMax*100)}%;background:var(--blue)"></i></div></div>
-        <div style="width:74px;text-align:right"><div style="font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums">${f.month.toLocaleString()}</div>
-          <div style="font-size:10px;color:${up?'var(--green)':'var(--s-muted)'}">${up?"▲":"▼"} wk ${f.wk[3]} · ${Math.round(f.month/feedTotal*100)}% share</div></div>
+          <div style="margin-top:4px" class="fullbar"><i style="width:${Math.round(f.runs/feedMax*100)}%;background:var(--blue)"></i></div></div>
+        <div style="width:74px;text-align:right"><div style="font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums">${f.runs} runs</div>
+          <div style="font-size:10px;color:${up?'var(--green)':'var(--s-muted)'}">${up?"▲":"▼"} ${f.wk[3]} last wk · ${Math.round(f.runs/feedTotal*100)}% share</div></div>
       </div>`;}).join("")}
   </div>
   <div class="k" style="margin:15px 2px 8px">Fastest turn cycles</div>
@@ -981,7 +990,7 @@ Views.cds=()=>{
         <div style="font-size:12.5px;font-weight:800;color:var(--green)">${s.stat.cycle}d</div>
       </div>`).join("")}
   </div>
-  <div style="font-size:11px;color:var(--s-muted);text-align:center;margin:12px 4px 4px;line-height:1.5">Contamination is a modelled estimate, confirmed when loads are cashed in. All figures simulated in this build.</div>
+  <div style="font-size:11px;color:var(--s-muted);text-align:center;margin:12px 4px 4px;line-height:1.5">Cash-in stats come from run logs in the app — the scheme doesn't share RVM-side data. All figures simulated in this build.</div>
  </div>
  ${tabbar()}`;
 };
