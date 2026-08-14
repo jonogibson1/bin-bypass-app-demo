@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bin Bypass">
+<title>Bin Bypass</title>
+<style>
+/* =====================================================================
+   Bin Bypass collector app — reference implementation (web)
+   Design tokens double as the future asset catalogue. Swift analogue:
+   Color assets + a Theme struct. Light/dark validated for CVD.
+   ===================================================================== */
+:root{
+  --bg:#F1F0EA; --page-ink:#1A2421; --page-muted:#5B6663;
+  --frame:#0E1210; --frame-edge:#2A322E;
+  --s-bg:#F6F5F1; --s-surface:#FFFFFF; --s-ink:#17211D; --s-muted:#5B6663;
+  --s-line:#E6E4DC; --s-shadow:0 1px 3px rgba(23,33,29,.08),0 6px 18px rgba(23,33,29,.07);
+  --green:#166534; --green-cta:#1B7A3F; --green-tint:#E2F1E7; --green-ink-on:#FFFFFF;
+  --amber:#DC7A00; --amber-tint:#FAEEDC;
+  --blue:#2563EB; --blue-tint:#E7EEFB;
+  --grey:#8A948F; --grey-tint:#ECEEED;
+  --map-land:#EDEBE2; --map-water:#CFE0E4; --map-park:#DFEADB; --map-road:#FFFFFF; --map-road2:#F7F5EE;
+  --hero-money:#14532D; --depot:#173FA5;
+}
+[data-theme="dark"]{
+  --bg:#0A0D0C; --page-ink:#EDF2EF; --page-muted:#93A09A;
+  --s-bg:#0E1411; --s-surface:#182019; --s-ink:#EFF4F1; --s-muted:#9AA8A1;
+  --s-line:#263029; --s-shadow:0 1px 3px rgba(0,0,0,.5),0 6px 18px rgba(0,0,0,.45);
+  --green:#28A55D; --green-cta:#28A55D; --green-tint:rgba(40,165,93,.16); --green-ink-on:#07130B;
+  --amber:#D08004; --amber-tint:rgba(208,128,4,.16);
+  --blue:#4C8DF6; --blue-tint:rgba(76,141,246,.16);
+  --grey:#77837D; --grey-tint:rgba(119,131,125,.18);
+  --map-land:#141B17; --map-water:#12222B; --map-park:#16241A; --map-road:#1F2A24; --map-road2:#1A231E;
+  --hero-money:#3FBF74; --depot:#7FA9F8;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:var(--bg);color:var(--page-ink);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;display:flex;align-items:center;justify-content:center;min-height:100vh}
+.deskhint{position:fixed;top:16px;left:50%;transform:translateX(-50%);font-size:12.5px;color:var(--page-muted);text-align:center}
+.phone{width:393px;height:830px;background:var(--frame);border-radius:54px;padding:10px;box-shadow:0 2px 6px rgba(0,0,0,.18),0 28px 56px rgba(10,20,15,.24);border:1px solid var(--frame-edge);position:relative;flex:0 0 auto}
+.screenwrap{width:100%;height:100%;border-radius:45px;background:var(--s-bg);overflow:hidden;position:relative;color:var(--s-ink)}
+.notch{position:absolute;top:21px;left:50%;transform:translateX(-50%);width:110px;height:28px;background:var(--frame);border-radius:999px;z-index:80;pointer-events:none}
+.homebar{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:126px;height:5px;border-radius:99px;background:var(--s-ink);opacity:.28;z-index:80;pointer-events:none}
+.sbspace{height:52px;flex:0 0 auto}
+@media (max-width:520px){
+  body{display:block}
+  .deskhint{display:none}
+  .phone{width:100%;height:100dvh;border-radius:0;padding:0;border:none;box-shadow:none}
+  .screenwrap{border-radius:0}
+  .notch,.homebar{display:none}
+  .sbspace{height:max(10px, env(safe-area-inset-top))}
+  .tabbar{padding-bottom:max(14px, env(safe-area-inset-bottom)) !important}
+}
+#view{position:absolute;inset:0;display:flex;flex-direction:column}
+.apphead{padding:6px 18px 10px;display:flex;align-items:center;justify-content:space-between;flex:0 0 auto;gap:10px}
+.apphead .t{font-size:22px;font-weight:800;letter-spacing:-.4px}
+.apphead .back{display:flex;align-items:center;gap:10px;min-height:36px;cursor:pointer;min-width:0}
+.iconbtn{width:36px;height:36px;border-radius:50%;background:var(--s-surface);border:1px solid var(--s-line);display:grid;place-items:center;color:var(--s-muted);cursor:pointer;box-shadow:var(--s-shadow);flex:0 0 auto}
+.chips{display:flex;gap:7px;padding:2px 14px 10px;overflow-x:auto;scrollbar-width:none;flex:0 0 auto}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;font-size:13px;font-weight:600;padding:9px 13px;border-radius:999px;background:var(--s-surface);border:1px solid var(--s-line);color:var(--s-muted);box-shadow:var(--s-shadow);cursor:pointer;user-select:none}
+.chip.on{background:var(--green-cta);border-color:var(--green-cta);color:var(--green-ink-on)}
+.tabbar{height:78px;background:var(--s-surface);border-top:1px solid var(--s-line);display:flex;z-index:40;padding-bottom:14px;flex:0 0 auto}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;font-weight:600;color:var(--s-muted);cursor:pointer}
+.tab.on{color:var(--green)}
+.tab svg{width:24px;height:24px}
+.cta{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--green-cta);color:var(--green-ink-on);font-weight:700;border-radius:14px;padding:15px;font-size:16px;box-shadow:0 4px 14px rgba(27,122,63,.35);cursor:pointer;user-select:none}
+.cta.sub{background:var(--s-surface);color:var(--s-ink);border:1px solid var(--s-line);box-shadow:var(--s-shadow)}
+.cta.dis{opacity:.45;pointer-events:none}
+.cta:active{transform:scale(.98)}
+.card{background:var(--s-surface);border:1px solid var(--s-line);border-radius:16px;box-shadow:var(--s-shadow)}
+.money{color:var(--hero-money);font-variant-numeric:tabular-nums;font-weight:800;letter-spacing:-.5px}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
+.dot.live{background:var(--green)} .dot.stale{background:var(--amber)} .dot.off{background:var(--grey)}
+.badge{display:inline-flex;align-items:center;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.badge.live{background:var(--green-tint);color:var(--green)}
+.badge.stale{background:var(--amber-tint);color:var(--amber)}
+.badge.open{background:var(--green-tint);color:var(--green)}
+.badge.blue{background:var(--blue-tint);color:var(--blue)}
+.badge.grey{background:var(--grey-tint);color:var(--s-muted)}
+.row{display:flex;align-items:center;justify-content:space-between}
+.hr{height:1px;background:var(--s-line);margin:12px 0}
+.k{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--s-muted)}
+.seg{display:flex;background:var(--s-bg);border:1px solid var(--s-line);border-radius:12px;padding:3px;gap:3px}
+.seg > div{flex:1;text-align:center;font-size:13px;font-weight:700;padding:9px 2px;border-radius:9px;color:var(--s-muted);display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;user-select:none}
+.seg > div.on{background:var(--green-cta);color:var(--green-ink-on);box-shadow:0 1px 4px rgba(0,0,0,.18)}
+.seg svg{width:16px;height:16px}
+.stepn{width:25px;height:25px;border-radius:50%;background:var(--green-cta);color:var(--green-ink-on);display:grid;place-items:center;font-size:12.5px;font-weight:800;flex:0 0 auto}
+.maparea{position:relative;flex:1;background:var(--map-land);overflow:hidden}
+.pin-u{position:absolute;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;z-index:10;cursor:pointer}
+.pin-u .b{min-width:38px;padding:6px 9px;border-radius:13px;background:var(--green-cta);color:var(--green-ink-on);font-size:14px;font-weight:800;text-align:center;box-shadow:0 3px 8px rgba(0,0,0,.28);border:2px solid var(--map-road)}
+.pin-u .tip{width:2.5px;height:9px;background:var(--green-cta)}
+.pin-u.stale .b{background:var(--amber)} .pin-u.stale .tip{background:var(--amber)}
+.pin-u.off .b{background:var(--grey)} .pin-u.off .tip{background:var(--grey)}
+.pin-u.sel .b{outline:3px solid var(--blue-tint)}
+.pin-u.pulse .b{animation:pulse .9s ease 2}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(27,122,63,.55)}70%{box-shadow:0 0 0 16px rgba(27,122,63,0)}100%{box-shadow:0 0 0 0 rgba(27,122,63,0)}}
+.pin-r{position:absolute;transform:translate(-50%,-50%);width:33px;height:33px;border-radius:10px;background:var(--blue);display:grid;place-items:center;box-shadow:0 3px 8px rgba(0,0,0,.28);border:2px solid var(--map-road);z-index:9;cursor:pointer}
+.pin-r svg{width:17px;height:17px}
+.pin-r.depot{border-radius:50%;width:35px;height:35px;background:var(--depot)}
+.pin-r.closed{opacity:.55}
+.me{position:absolute;transform:translate(-50%,-50%);width:17px;height:17px;border-radius:50%;background:var(--blue);border:3px solid #fff;box-shadow:0 0 0 7px rgba(37,99,235,.22);z-index:11}
+[data-theme="dark"] .me{border-color:#0E1411}
+.legend{position:absolute;left:12px;top:10px;padding:9px 11px;font-size:10.5px;line-height:1.8;border-radius:12px;z-index:12}
+.sheet{position:absolute;left:10px;right:10px;bottom:10px;border-radius:20px;padding:14px 16px 15px;z-index:30;transform:translateY(135%);transition:transform .28s cubic-bezier(.3,1,.4,1)}
+.sheet.up{transform:none}
+.rack{display:flex;gap:7px}
+.slot{flex:1;height:92px;border-radius:11px;border:1.5px solid var(--s-line);position:relative;background:var(--s-bg);overflow:hidden;display:flex;align-items:flex-end}
+.slot .fill{width:100%;background:var(--green-tint);border-top:2.5px solid var(--green);height:78%}
+.slot.empty .fill{display:none}
+.slot .sn{position:absolute;top:6px;left:0;right:0;text-align:center;font-size:10px;font-weight:700;color:var(--s-muted)}
+.slot .st{position:absolute;bottom:6px;left:0;right:0;text-align:center;font-size:10px;font-weight:700;color:var(--green)}
+.slot.empty .st{color:var(--s-muted)}
+.notif{position:absolute;top:56px;left:10px;right:10px;z-index:90;border-radius:18px;padding:13px 15px;display:flex;gap:11px;align-items:center;transform:translateY(-190%);transition:transform .35s cubic-bezier(.3,1,.4,1);cursor:pointer;background:var(--s-surface);border:1px solid var(--s-line);box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.notif.show{transform:none}
+@media (max-width:520px){.notif{top:max(10px, env(safe-area-inset-top))}}
+.toast{position:absolute;bottom:100px;left:50%;transform:translate(-50%,20px);opacity:0;background:var(--s-ink);color:var(--s-bg);font-size:13.5px;font-weight:600;padding:11px 18px;border-radius:999px;z-index:95;transition:.3s;pointer-events:none;white-space:nowrap;max-width:92%;overflow:hidden;text-overflow:ellipsis}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.scroll{flex:1;overflow-y:auto;padding:2px 16px 16px;scrollbar-width:none;overscroll-behavior:contain}
+.scroll::-webkit-scrollbar{display:none}
+.urow{padding:11px 14px;border-bottom:1px solid var(--s-line);display:flex;align-items:center;justify-content:space-between;cursor:pointer;gap:8px}
+.urow:last-child{border-bottom:none}
+.urow:active{background:var(--s-bg)}
+.runrow{display:flex;gap:12px;padding:11px 14px;align-items:center;cursor:pointer}
+.runrow .cb{width:24px;height:24px;border-radius:8px;border:2px solid var(--s-line);flex:0 0 auto;display:grid;place-items:center;color:transparent}
+.runrow.on .cb{background:var(--green-cta);border-color:var(--green-cta);color:var(--green-ink-on)}
+/* site rack grid */
+.ugrid{display:grid;grid-template-columns:repeat(10,1fr);gap:5px}
+.ucell{border:1.5px solid var(--s-line);border-radius:7px;height:46px;position:relative;overflow:hidden;background:var(--s-bg);display:flex;align-items:flex-end}
+.ucell i{display:block;width:100%;background:var(--green-tint);border-top:2px solid var(--green)}
+.ucell.full i{background:var(--green-cta);border-top:none}
+.ucell.zero i{display:none}
+.ucell span{position:absolute;top:3px;left:0;right:0;text-align:center;font-size:8.5px;font-weight:700;color:var(--s-muted);z-index:1}
+.ucell.full span{color:var(--green-ink-on)}
+.fullbar{height:9px;border-radius:99px;background:var(--s-bg);border:1px solid var(--s-line);overflow:hidden}
+.fullbar i{display:block;height:100%;border-radius:99px;background:var(--green-cta)}
+/* onboarding */
+.ob{position:absolute;inset:0;z-index:200;background:var(--s-bg);display:flex;flex-direction:column}
+.ob .slides{flex:1;display:flex;transition:transform .35s cubic-bezier(.3,1,.4,1)}
+.ob .slide{flex:0 0 100%;display:flex;flex-direction:column;padding:0 28px}
+.ob .art{flex:1;display:grid;place-items:center}
+.ob h2{font-size:25px;font-weight:800;letter-spacing:-.4px;text-align:center;line-height:1.2}
+.ob p{font-size:14.5px;color:var(--s-muted);line-height:1.5;text-align:center;margin-top:9px}
+.dots{display:flex;gap:6px;justify-content:center;margin:18px 0 8px}
+.dots div{width:7px;height:7px;border-radius:50%;background:var(--s-line);transition:.2s}
+.dots div.on{width:20px;border-radius:99px;background:var(--green-cta)}
+/* modal confirm */
+.modalbg{position:absolute;inset:0;background:rgba(10,15,12,.45);z-index:150;display:grid;place-items:end center;opacity:0;pointer-events:none;transition:.25s}
+.modalbg.show{opacity:1;pointer-events:auto}
+.modal{width:calc(100% - 20px);margin-bottom:10px;border-radius:22px;padding:18px;transform:translateY(30px);transition:.25s}
+.modalbg.show .modal{transform:none}
+/* host card */
+.hostcard{border-radius:22px;overflow:hidden;box-shadow:var(--s-shadow);border:1px solid var(--s-line)}
+.hostcard .inner{background:linear-gradient(160deg,#123B24,#1B7A3F);padding:24px 22px 22px;color:#fff}
+.bars{display:flex;align-items:flex-end;gap:9px;height:110px;padding-top:14px}
+.bars .bar{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end}
+.bars .bar i{display:block;width:100%;background:var(--green);opacity:.45;border-radius:4px 4px 0 0}
+.bars .bar.cur i{opacity:1}
+.bars .bar span{font-size:9.5px;color:var(--s-muted)}
+.bars .bar b{font-size:11px;color:var(--s-ink)}
+</style>
+</head>
+<body data-theme="light">
+<div class="deskhint">Bin Bypass · collector app reference build · simulated live network</div>
+<div class="phone"><div class="screenwrap" id="app">
+  <div class="notch"></div>
+  <div class="notif" id="notif"></div>
+  <div class="toast" id="toast"></div>
+  <div class="modalbg" id="modalbg"><div class="card modal" id="modal"></div></div>
+  <div id="view"></div>
+  <div class="homebar"></div>
+</div></div>
+<script>
+"use strict";
+/* =====================================================================
+   ARCHITECTURE — each layer has a direct Swift analogue (see PORTING.md)
+
+   MODELS   plain objects mirroring the production packet and the
+            refund-point dataset                    -> Swift Codable structs
+   MOCK API async data source + live subscription   -> APIClient (URLSession
+            simulating the cell-network feed           + WebSocket/poll)
+   STORE    single state object, pub/sub            -> ObservableObject with
+                                                       @Published properties
+   ROUTER   navigation stack (push/pop/tab)         -> NavigationStack path
+   VIEWS    pure functions state -> HTML string     -> SwiftUI View structs
+   ===================================================================== */
+
+/* ============================ MODELS ============================ */
+/* RefundPoint: from data/tas-refund-points.json (real network).
+   hours are typical per type; digital=false marks voucher-only sites.
+   x,y = hand-placed map position (Hobart region only) — replaced by
+   lat/lng + MapKit in the port. */
+const RP_HOURS={RVM:{open:7,close:21,label:"7 am – 9 pm daily"},Depot:{open:9,close:16.5,label:"9:00 – 4:30 weekdays",weekdaysOnly:true},OTC:{open:9,close:17,label:"9 am – 5 pm",weekdaysOnly:true}};
+const REFUND_POINTS=[
+ {id:"rp01",name:"Astron Triabunna Roadhouse",type:"RVM",addr:"34 Tasman Hwy, Triabunna",region:"East Coast",digital:true},
+ {id:"rp02",name:"Beaconsfield Thirsty Camel",type:"RVM",addr:"184 Weld Street, Beaconsfield",region:"North",digital:false},
+ {id:"rp03",name:"Bicheno Caravan Park & Take Away",type:"OTC",addr:"52 Burgess Street, Bicheno",region:"East Coast",digital:false},
+ {id:"rp04",name:"Bothwell Garage",type:"RVM",addr:"16 Patrick Street, Bothwell",region:"Central",digital:false},
+ {id:"rp05",name:"Burnie Emu Bay Lions Book Club",type:"RVM",addr:"Cnr Anglesea & Smith St, Wivenhoe",region:"North West",digital:true},
+ {id:"rp06",name:"Campbell Town Golf Club",type:"RVM",addr:"2 Torlesse Street, Campbell Town",region:"Midlands",digital:true},
+ {id:"rp07",name:"Claremont Plaza Shopping Centre",type:"RVM",addr:"35 Main Road, Claremont",region:"Hobart",digital:true,x:24,y:6},
+ {id:"rp08",name:"Cove Hill Precinct",type:"RVM",addr:"1-3 Hurst Street, Bridgewater",region:"Hobart",digital:true,x:44,y:4},
+ {id:"rp09",name:"Cradle Mountain Fishery & Camping",type:"OTC",addr:"2369 Cradle Mountain Road, Moina",region:"North West",digital:false},
+ {id:"rp10",name:"Deloraine Lions Club",type:"RVM",addr:"4-6 Racecourse Road, Deloraine",region:"North",digital:true},
+ {id:"rp11",name:"Dodges Ferry Hotel",type:"RVM",addr:"519 Old Forcett Road, Dodges Ferry",region:"South East",digital:false},
+ {id:"rp12",name:"Dover Community Workshop",type:"RVM",addr:"6987 Huon Highway, Dover",region:"Huon",digital:false},
+ {id:"rp13",name:"Eastlands Shopping Centre",type:"RVM",addr:"26 Bligh Street, Rosny Park",region:"Hobart",digital:true,x:80,y:58},
+ {id:"rp14",name:"Elphin Sports Centre",type:"RVM",addr:"14-16 Dowling Street, Launceston",region:"North",digital:true},
+ {id:"rp15",name:"Flinders Island Transfer Station",type:"RVM",addr:"419 Memana Rd, Whitemark",region:"Islands",digital:false},
+ {id:"rp16",name:"George Town City Mission",type:"RVM",addr:"10 Sorell Street, George Town",region:"North",digital:true},
+ {id:"rp17",name:"Glebe Hill Village",type:"RVM",addr:"1 Commerce Dr, Howrah",region:"Hobart",digital:true,x:88,y:66},
+ {id:"rp18",name:"Glenorchy Central Carpark",type:"RVM",addr:"2 Cooper Street, Glenorchy",region:"Hobart",digital:true,x:31,y:9},
+ {id:"rp19",name:"Heemskirk Motel",type:"RVM",addr:"235 Main Street, Zeehan",region:"West Coast",digital:false},
+ {id:"rp20",name:"King Island IGA",type:"RVM",addr:"8-10 Main Street, Currie",region:"Islands",digital:false},
+ {id:"rp21",name:"Kingborough Bowls & Community Club",type:"RVM",addr:"1615 Channel Highway, Margate",region:"Kingborough",digital:true},
+ {id:"rp22",name:"Kingston Town Shopping Centre",type:"RVM",addr:"37-59 Maranoa Road, Kingston",region:"Kingborough",digital:true,x:22,y:88},
+ {id:"rp23",name:"Lauderdale Foreshore Hotel",type:"RVM",addr:"464 South Arm Road, Lauderdale",region:"Hobart",digital:false,x:92,y:82},
+ {id:"rp24",name:"Meadow Mews Plaza",type:"RVM",addr:"102-106 Hobart Road, Kings Meadows",region:"North",digital:true},
+ {id:"rp25",name:"Mowbray Marketplace",type:"RVM",addr:"21 Vermont Road, Mowbray",region:"North",digital:true},
+ {id:"rp26",name:"Murdunna Roadhouse",type:"RVM",addr:"4050 Arthur Hwy, Murdunna",region:"Tasman",digital:false},
+ {id:"rp27",name:"Prospect Vale Marketplace",type:"RVM",addr:"350 Westbury Road, Prospect Vale",region:"North",digital:true},
+ {id:"rp28",name:"Queens Walk Oval - New Town",type:"RVM",addr:"Risdon Rd/Queens Walk, New Town",region:"Hobart",digital:true,x:47,y:26},
+ {id:"rp29",name:"Queenstown Empire Hotel",type:"RVM",addr:"2 Orr Street, Queenstown",region:"West Coast",digital:false},
+ {id:"rp30",name:"Railway IGA Ulverstone",type:"RVM",addr:"13-15 Alexandra Rd, Ulverstone",region:"North West",digital:true},
+ {id:"rp31",name:"Recycle Rewards Cambridge",type:"Depot",addr:"Unit 6, 3 Railway Court, Cambridge",region:"Hobart",digital:true,x:93,y:12},
+ {id:"rp32",name:"Recycle Rewards Depot Goodwood",type:"Depot",addr:"Entry via Hornby Road, Goodwood",region:"Hobart",digital:true,x:36,y:14},
+ {id:"rp33",name:"Recycle Rewards Depot Launceston",type:"Depot",addr:"10 Swanston Drive, Waverley",region:"North",digital:true},
+ {id:"rp34",name:"Recycle Rewards Depot Somerset",type:"Depot",addr:"2 McKays Road, Somerset",region:"North West",digital:true},
+ {id:"rp35",name:"Recycle Rewards Depot Spreyton",type:"Depot",addr:"8 Wigmore Road, Spreyton",region:"North West",digital:true},
+ {id:"rp36",name:"Richmond Ampol",type:"RVM",addr:"37 Bridge Street, Richmond",region:"Hobart",digital:false,x:76,y:5},
+ {id:"rp37",name:"Scottsdale Recreation Ground",type:"RVM",addr:"Rose Street, Scottsdale",region:"North East",digital:false},
+ {id:"rp38",name:"Sheffield Astron",type:"RVM",addr:"2 Main St, Sheffield",region:"North West",digital:false},
+ {id:"rp39",name:"Shoreline Plaza Shopping Centre",type:"RVM",addr:"6 Shoreline Drive, Howrah",region:"Hobart",digital:true,x:84,y:73},
+ {id:"rp40",name:"Smithton Club",type:"RVM",addr:"21-23 Smith Street, Smithton",region:"North West",digital:false},
+ {id:"rp41",name:"Sorell Shopping Plaza",type:"RVM",addr:"Cole Street, Sorell",region:"South East",digital:true},
+ {id:"rp42",name:"South Hobart Tip Shop (RWC)",type:"RVM",addr:"McRobies Road, South Hobart",region:"Hobart",digital:true,x:13,y:44},
+ {id:"rp43",name:"Sparkles Huonville Car Wash",type:"RVM",addr:"133 Main Street, Huonville",region:"Huon",digital:false},
+ {id:"rp44",name:"St Helens Sports Complex",type:"RVM",addr:"117 Tully St, St Helens",region:"North East",digital:true},
+ {id:"rp45",name:"St Marys Op Shop",type:"OTC",addr:"25A Main Street, St Marys",region:"East Coast",digital:false},
+ {id:"rp46",name:"Swansea Bark Mill Tavern & Bakery",type:"RVM",addr:"96 Tasman Hwy, Swansea",region:"East Coast",digital:false},
+ {id:"rp47",name:"Tasman Ex-Services Club Nubeena",type:"RVM",addr:"1755 Main Road, Nubeena",region:"Tasman",digital:false},
+ {id:"rp48",name:"Windsor Community Precinct",type:"RVM",addr:"Windsor Drive, Riverside",region:"North",digital:true},
+ {id:"rp49",name:"Woolworths Devonport",type:"RVM",addr:"41 Oldaker Street, Devonport",region:"North West",digital:true},
+ {id:"rp50",name:"Woolworths New Norfolk",type:"RVM",addr:"51 George St, New Norfolk",region:"Derwent Valley",digital:true},
+ {id:"rp51",name:"Wynyard Vinnies",type:"RVM",addr:"38 Jackson Street, Wynyard",region:"North West",digital:false}
+];
+/* Site: one fence/park hosting a CLUSTER of Bin Bypass units.
+   Each unit is a six-slot rack holding AT MOST SIX containers, so a
+   site of 20 units holds 120 ($12.00). The production packet remains
+   per-unit ({unit, slots[6], vbat_mv, rssi, epoch}); the API
+   aggregates a site's units into what you see here.
+   fills[] = containers currently in each rack (0–6). */
+const nowEpoch=()=>Math.floor(Date.now()/1000);
+const UNIT_CAP=6;
+function mkFills(n,total){ /* deterministic: racks nearest the gate fill to the brim first */
+ const f=Array(n).fill(0); let r=Math.min(total,n*UNIT_CAP);
+ for(let i=0;i<n&&r>0;i++){ f[i]=Math.min(i%3===2?3:UNIT_CAP,r); r-=f[i]; }
+ for(let i=0;i<n&&r>0;i++){ const add=Math.min(UNIT_CAP-f[i],r); f[i]+=add; r-=add; }
+ return f;
+}
+const SITES=[
+ {id:"s1",host:"Sandy Bay Cricket Club",   area:"Sandy Bay",  hostEmoji:"🏏", unitCount:20, fills:mkFills(20,87), addedToday:34, sick:0, epoch:nowEpoch()-4*60,  km:1.2, x:48,y:63, rel:"claimed", lastEmptied:"Tue 5 Aug", installed:"Mar 2026", lifetime:11240, stat:{full:34,turn:41,contam:2.1,cycle:2.9}},
+ {id:"s2",host:"New Town Bowls Club",      area:"New Town",   hostEmoji:"🎳", unitCount:12, fills:mkFills(12,54), addedToday:18, sick:0, epoch:nowEpoch()-11*60, km:3.4, x:56,y:36, rel:"claimed", lastEmptied:"Thu 7 Aug", installed:"Apr 2026", lifetime:8360,  stat:{full:28,turn:33,contam:3.4,cycle:3.6}},
+ {id:"s3",host:"Lindisfarne Scout Hall",   area:"Lindisfarne",hostEmoji:"⚜️", unitCount:8,  fills:mkFills(8,41),  addedToday:12, sick:0, epoch:nowEpoch()-7*60,  km:5.1, x:88,y:30, rel:"watched", lastEmptied:"Wed 6 Aug", installed:"May 2026", lifetime:5210,  stat:{full:22,turn:38,contam:1.8,cycle:3.1}},
+ {id:"s4",host:"Hobart Men's Shed, Moonah",area:"Moonah",     hostEmoji:"🔨", unitCount:6,  fills:mkFills(6,22),  addedToday:8,  sick:0, epoch:nowEpoch()-19*60, km:4.6, x:39,y:22, rel:"claimed", lastEmptied:"Fri 8 Aug", installed:"Mar 2026", lifetime:9870,  stat:{full:18,turn:27,contam:5.2,cycle:4.4}},
+ {id:"s5",host:"Taroona High School",      area:"Taroona",    hostEmoji:"🎓", unitCount:10, fills:mkFills(10,31), addedToday:5,  sick:1, epoch:nowEpoch()-42*60, km:3.9, x:19,y:31, rel:"watched", lastEmptied:"Mon 4 Aug", installed:"Jun 2026", lifetime:3105,  stat:{full:41,turn:22,contam:2.7,cycle:5.8}},
+ {id:"s6",host:"Kingston Beach Surf Club", area:"Kingston",   hostEmoji:"🏄", unitCount:4,  fills:mkFills(4,9),   addedToday:4,  sick:0, epoch:nowEpoch()-25*60, km:9.8, x:27,y:79, rel:"watched", lastEmptied:"Sat 9 Aug", installed:"Jul 2026", lifetime:2130,  stat:{full:12,turn:19,contam:4.1,cycle:6.5}}
+];
+/* CDS analytics feed (mock; server-side aggregation in production).
+   RVM feed = containers cashed through each machine via Bin Bypass
+   runs this month. Contamination is a MODELLED estimate from sensor
+   patterns (weight/ToF anomalies), verified at cash-in. */
+const RVM_FEED=[
+ {rp:"rp28",month:1840,wk:[380,420,470,570]},
+ {rp:"rp13",month:1260,wk:[300,290,330,340]},
+ {rp:"rp42",month:730, wk:[150,180,190,210]},
+ {rp:"rp18",month:540, wk:[120,130,140,150]},
+ {rp:"rp22",month:480, wk:[110,120,130,120]}
+];
+/* Derived helpers — server-side in production (freshness computed
+   at the API so every client agrees; see roadmap Phase 1). */
+const CENTS=10;
+const ready=s=>s.fills.reduce((a,b)=>a+b,0);
+const capOf=s=>s.unitCount*UNIT_CAP;
+const pctFull=s=>Math.round(ready(s)/capOf(s)*100);
+const val=s=>ready(s)*CENTS/100;
+const fmt$=n=>"$"+n.toFixed(2);
+const uval=s=>fmt$(val(s));
+const minsAgo=s=>Math.max(0,Math.round((nowEpoch()-s.epoch)/60));
+const freshness=s=>{const m=minsAgo(s);return m<30?"live":(m<180?"stale":"offline")};
+const totalReady=()=>SITES.reduce((a,s)=>a+val(s),0);
+const totalCount=()=>SITES.reduce((a,s)=>a+ready(s),0);
+const isOpen=rp=>{const h=RP_HOURS[rp.type];const d=new Date();const hr=d.getHours()+d.getMinutes()/60;const wk=d.getDay()>=1&&d.getDay()<=5;return hr>=h.open&&hr<h.close&&(!h.weekdaysOnly||wk);};
+/* ============================ MOCK API ============================ */
+/* Simulates the cellular feed. In the port this becomes APIClient:
+   GET /v1/units, GET /v1/refund-points, plus a poll/push channel. */
+const Feed={
+ listeners:[],
+ subscribe(fn){this.listeners.push(fn)},
+ emit(ev){this.listeners.forEach(f=>f(ev))},
+ start(){
+   setInterval(()=>{ /* someone drops containers into a rack at a live site */
+     const live=SITES.filter(s=>freshness(s)==="live"&&ready(s)<capOf(s));
+     if(!live.length)return;
+     const s=live[Math.floor(Math.random()*live.length)];
+     let n=1+Math.floor(Math.random()*2);
+     while(n-->0){const i=s.fills.findIndex(f=>f<UNIT_CAP);if(i<0)break;s.fills[i]++;s.addedToday++;}
+     s.epoch=nowEpoch();
+     Feed.emit({type:"packet",site:s});
+   },6000);
+   setInterval(()=>Feed.emit({type:"clock"}),30000); /* freshness refresh */
+   setTimeout(()=>{Feed.emit({type:"notify",site:SITES[0]})},9000);
+ }
+};
+/* ---- Google Maps base (keep the pin graphics, swap the canvas) ----
+   Paste a Maps JavaScript API key below and the map screen renders on
+   real Google Maps with the same pin overlays at real coordinates.
+   With no key it falls back to the built-in stylised map so the file
+   stays fully self-contained/offline. Coordinates are approximate
+   pending the Phase 0 geocoding pass. */
+const GMAPS_KEY="";                       /* <- your key here */
+const HOME={lat:-42.889,lng:147.330};     /* collector's position (demo) */
+const SITE_LL={s1:{lat:-42.913,lng:147.352},s2:{lat:-42.855,lng:147.308},s3:{lat:-42.845,lng:147.365},s4:{lat:-42.840,lng:147.297},s5:{lat:-42.945,lng:147.348},s6:{lat:-42.977,lng:147.320}};
+const RP_LL={rp07:{lat:-42.782,lng:147.253},rp08:{lat:-42.737,lng:147.223},rp13:{lat:-42.873,lng:147.363},rp17:{lat:-42.888,lng:147.420},rp18:{lat:-42.833,lng:147.276},rp22:{lat:-42.976,lng:147.305},rp23:{lat:-42.913,lng:147.487},rp28:{lat:-42.860,lng:147.315},rp31:{lat:-42.831,lng:147.454},rp32:{lat:-42.827,lng:147.293},rp36:{lat:-42.735,lng:147.437},rp39:{lat:-42.887,lng:147.407},rp42:{lat:-42.898,lng:147.303}};
+let gmap=null, gOverlays=[], gLoaded=false, gLoading=false;
+function loadGmaps(cb){
+ if(!GMAPS_KEY)return cb(false);
+ if(gLoaded)return cb(true);
+ if(gLoading)return;
+ gLoading=true;
+ const s=document.createElement("script");
+ s.src="https://maps.googleapis.com/maps/api/js?key="+GMAPS_KEY+"&loading=async&callback=__gmapsReady";
+ window.__gmapsReady=()=>{gLoaded=true;cb(true);};
+ s.onerror=()=>cb(false);
+ document.head.appendChild(s);
+}
+/* Custom HTML pins on the Google base: same .pin-u/.pin-r markup */
+function gPin(latlng,html,onclick){
+ const ov=new google.maps.OverlayView();
+ ov.onAdd=function(){
+   const d=document.createElement("div");
+   d.style.position="absolute";d.innerHTML=html;d.style.cursor="pointer";
+   d.firstChild.style.transform="translate(-50%,-100%)";
+   if(onclick)d.onclick=e=>{e.stopPropagation();onclick();};
+   this.div=d;this.getPanes().overlayMouseTarget.appendChild(d);
+ };
+ ov.draw=function(){
+   const p=this.getProjection().fromLatLngToDivPixel(new google.maps.LatLng(latlng));
+   if(this.div){this.div.style.left=p.x+"px";this.div.style.top=p.y+"px";}
+ };
+ ov.onRemove=function(){if(this.div){this.div.remove();this.div=null;}};
+ ov.setMap(gmap);
+ return ov;
+}
+const GMAP_STYLE=[ /* muted base so the green/amber/blue pins stay the heroes */
+ {featureType:"poi",stylers:[{visibility:"off"}]},
+ {featureType:"transit",stylers:[{visibility:"off"}]},
+ {featureType:"road",elementType:"labels.icon",stylers:[{visibility:"off"}]},
+ {elementType:"geometry",stylers:[{saturation:-45},{lightness:8}]}
+];
+function mountGmap(el,pins){
+ gmap=new google.maps.Map(el,{center:HOME,zoom:12,disableDefaultUI:true,styles:GMAP_STYLE,gestureHandling:"greedy",clickableIcons:false});
+ gOverlays.forEach(o=>o.setMap&&o.setMap(null)); gOverlays=[];
+ pins.forEach(p=>gOverlays.push(gPin(p.ll,p.html,p.onclick)));
+ gmap.addListener("click",()=>closeSheet());
+}
+/* ============================ STORE ============================ */
+/* Single source of truth. Swift analogue: ObservableObject with
+   @Published properties; views re-render on change. */
+const Store={
+ state:{
+   screen:{name:"onboarding",params:{}},   /* current route */
+   stack:[],                               /* back stack -> NavigationStack path */
+   tab:"map",
+   filters:{units:true,rvm:true,depot:true,open:false,worth:false},
+   mode:"walk",
+   runSel:null,
+   account:"personal",                     /* personal | charity framing */
+   cdsMetric:"full",                       /* full | turn | contam */
+   obSlide:0,
+   history:[
+     {date:"Sun 10 Aug",units:2,count:118,cents:1180,dest:"Queens Walk Oval RVM"},
+     {date:"Thu 7 Aug", units:3,count:176,cents:1760,dest:"Eastlands RVM"},
+     {date:"Sat 12 Jul",units:4,count:231,cents:2310,dest:"Eastlands RVM",best:true},
+     {date:"Tue 1 Jul", units:2,count:98, cents:980, dest:"Queens Walk Oval RVM"}
+   ],
+   monthly:[{m:"Mar",c:4210},{m:"Apr",c:6840},{m:"May",c:8100},{m:"Jun",c:9960},{m:"Jul",c:12230},{m:"Aug",c:9640}]
+ },
+ set(patch){Object.assign(this.state,patch);render();},
+ go(name,params={}){ /* push */
+   this.state.stack.push(this.state.screen);
+   this.state.screen={name,params}; render();
+ },
+ back(){const p=this.state.stack.pop(); this.state.screen=p||{name:"map",params:{}}; render();},
+ tabTo(name){this.state.stack=[]; this.state.tab=name; this.state.screen={name,params:{}}; render();}
+};
+/* ============================ ICONS ============================ */
+const I={
+ recy:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><path d="M4.5 9a8 8 0 0 1 14-1.5"/><path d="M18.5 3.5v4h-4"/><path d="M19.5 15a8 8 0 0 1-14 1.5"/><path d="M5.5 20.5v-4h4"/></svg>',
+ depot:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>',
+ map:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>',
+ val:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c0-1 1-1.7 2.5-1.7s2.5.7 2.5 1.7-1 1.4-2.5 1.7-2.5.8-2.5 1.8 1 1.7 2.5 1.7 2.5-.7 2.5-1.7"/></svg>',
+ units:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M9 5v14M15 5v14"/></svg>',
+ back:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>',
+ tick:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l5 5 10-11"/></svg>',
+ moon:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 13A8.1 8.1 0 0 1 11 4a8 8 0 1 0 9 9z"/></svg>',
+ clock:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>',
+ share:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M7.5 8L12 3.5 16.5 8"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>',
+ walk:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="4.5" r="2"/><path d="M12.5 8.5L10 12l2.5 3v5"/><path d="M10 12l-3 1M12.5 8.5l3 2 2.5-.5"/><path d="M10 15.5L7.5 21"/></svg>',
+ bike:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="17" r="3.5"/><circle cx="18" cy="17" r="3.5"/><path d="M6 17l4-8h5l3 8M10 9l-1.5-3H6"/><circle cx="15" cy="5" r="1.4" fill="currentColor" stroke="none"/></svg>',
+ car:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15l1.5-5.5A2 2 0 0 1 7.4 8h9.2a2 2 0 0 1 1.9 1.5L20 15"/><rect x="3" y="14" width="18" height="5" rx="1.6"/><circle cx="7.2" cy="19" r="1.7"/><circle cx="16.8" cy="19" r="1.7"/></svg>',
+ eye:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.8"/></svg>',
+ flag:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h12l-2.5 4L17 12H5"/></svg>',
+ chart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>'
+};
+const MAPSVG=`<svg viewBox="0 0 393 640" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0;width:100%;height:100%">
+ <path d="M273 0 C260 72 290 115 274 178 C262 228 279 281 305 324 C331 367 319 456 337 528 L337 640 L393 640 L393 0 Z" fill="var(--map-water)"/>
+ <path d="M393 108 C355 115 336 144 341 180 C346 211 374 223 393 218 Z" fill="var(--map-water)"/>
+ <ellipse cx="83" cy="132" rx="54" ry="36" fill="var(--map-park)"/>
+ <ellipse cx="177" cy="504" rx="47" ry="31" fill="var(--map-park)"/>
+ <ellipse cx="296" cy="564" rx="40" ry="26" fill="var(--map-park)"/>
+ <path d="M0 228 C95 216 189 235 274 223" stroke="var(--map-road)" stroke-width="8" fill="none"/>
+ <path d="M140 0 C147 168 128 360 156 640" stroke="var(--map-road)" stroke-width="8" fill="none"/>
+ <path d="M0 396 C106 379 213 408 310 386" stroke="var(--map-road)" stroke-width="6" fill="none"/>
+ <path d="M47 0 C62 144 36 312 69 480 C81 540 71 600 76 640" stroke="var(--map-road2)" stroke-width="5" fill="none"/>
+ <path d="M225 72 C237 192 211 312 237 456" stroke="var(--map-road2)" stroke-width="5" fill="none"/>
+ <path d="M274 178 C308 168 355 178 393 170" stroke="var(--map-road2)" stroke-width="5" fill="none"/>
+ <text x="345" y="300" font-size="12" fill="var(--s-muted)" opacity=".8" transform="rotate(78 345 300)" font-style="italic">River Derwent</text>
+</svg>`;
+/* ============================ SHARED VIEW BITS ============================ */
+const $=id=>document.getElementById(id);
+const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+function tabbar(){
+ const t=Store.state.tab;
+ return `<div class="tabbar">
+  <div class="tab ${t==='map'?'on':''}" onclick="Store.tabTo('map')">${I.map}Map</div>
+  <div class="tab ${t==='value'?'on':''}" onclick="Store.tabTo('value')">${I.val}Value</div>
+  <div class="tab ${t==='cds'?'on':''}" onclick="Store.tabTo('cds')">${I.chart}CDS</div>
+  <div class="tab ${t==='myunits'?'on':''}" onclick="Store.tabTo('myunits')">${I.units}My sites</div>
+ </div>`;
+}
+const themeBtn=()=>`<div class="iconbtn" onclick="toggleTheme()">${I.moon}</div>`;
+function toggleTheme(){document.body.dataset.theme=document.body.dataset.theme==="light"?"dark":"light";}
+function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),2200);}
+function modal(html){$("modal").innerHTML=html;$("modalbg").classList.add("show");}
+function closeModal(){$("modalbg").classList.remove("show");}
+function statusRow(u){
+ const f=freshness(u), m=minsAgo(u);
+ const lbl=f==="live"?`Live ${m} min`:(f==="stale"?`Stale ${m} min`:`Offline`);
+ return `<span class="dot ${f==="offline"?"off":f}"></span>${lbl}`;
+}
+/* ============================ VIEWS ============================ */
+/* Each view: pure function of Store.state -> HTML. SwiftUI analogue:
+   struct MapScreen: View { @EnvironmentObject var store ... } */
+const Views={};
+
+/* ---- Onboarding (3 frames) ---- */
+Views.onboarding=()=>{
+ const s=Store.state.obSlide;
+ const arts=[
+  `<svg viewBox="0 0 200 190" style="width:180px">
+    <rect x="62" y="38" width="56" height="112" rx="10" fill="var(--green-tint)" stroke="var(--green)" stroke-width="2.5"/>
+    <ellipse cx="90" cy="42" rx="20" ry="5" fill="none" stroke="var(--green)" stroke-width="2.5"/>
+    <path d="M74 78h32M74 92h32M74 106h22" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round" opacity=".55"/>
+    <circle cx="138" cy="120" r="34" fill="var(--green-cta)"/><circle cx="138" cy="120" r="27" fill="none" stroke="var(--green-ink-on)" stroke-width="1.6" opacity=".5"/>
+    <text x="138" y="129" text-anchor="middle" font-size="21" font-weight="800" fill="var(--green-ink-on)">10c</text></svg>`,
+  `<div style="width:200px;height:200px;border-radius:28px;background:var(--map-land);position:relative;overflow:hidden;border:1px solid var(--s-line)">
+    <svg viewBox="0 0 210 210" style="position:absolute;inset:0"><path d="M150 0 C140 60 160 120 150 210 L210 210 L210 0 Z" fill="var(--map-water)"/><path d="M0 80 C60 72 110 86 150 78" stroke="var(--map-road)" stroke-width="5" fill="none"/><path d="M70 0 C76 80 62 150 78 210" stroke="var(--map-road)" stroke-width="5" fill="none"/></svg>
+    <div class="pin-u" style="left:30%;top:40%"><div class="b">54</div><div class="tip"></div></div>
+    <div class="pin-u" style="left:62%;top:68%"><div class="b">87</div><div class="tip"></div></div>
+    <div class="pin-u stale" style="left:72%;top:28%"><div class="b">31</div><div class="tip"></div></div></div>`,
+  `<svg viewBox="0 0 200 190" style="width:180px">
+    <rect x="48" y="18" width="104" height="150" rx="12" fill="var(--blue-tint)" stroke="var(--blue)" stroke-width="2.5"/>
+    <circle cx="100" cy="70" r="24" fill="var(--blue)"/><circle cx="100" cy="70" r="15" fill="var(--s-bg)"/>
+    <rect x="66" y="112" width="68" height="12" rx="6" fill="var(--blue)" opacity=".3"/>
+    <g transform="rotate(-8 158 140)"><rect x="138" y="122" width="52" height="34" rx="6" fill="var(--green-cta)"/><text x="164" y="143" text-anchor="middle" font-size="13" font-weight="800" fill="var(--green-ink-on)">$23.80</text></g></svg>`
+ ];
+ const copy=[
+  ["Containers are money","Most drink bottles, cans and cartons between 150 mL and 3 L are worth 10c each through Recycle Rewards Tasmania."],
+  ["Find full sites near you","Every Bin Bypass rack holds six containers and reports live over the mobile network. Sites host up to 20 racks, so you only travel when it's worth the trip."],
+  ["Cash in at a refund point","Build a run and we'll end it at an open refund point. 51 machines, depots and counters across Tasmania."]
+ ];
+ return `<div class="ob">
+  <div class="sbspace"></div>
+  <div style="text-align:right;padding:6px 20px 0;font-size:13.5px;font-weight:600;color:var(--s-muted);cursor:pointer;min-height:20px" onclick="finishOb()">${s<2?"Skip":"&nbsp;"}</div>
+  <div class="slides" style="transform:translateX(-${s*100}%)">
+   ${copy.map((c,i)=>`<div class="slide"><div class="art">${arts[i]}</div>
+     <div style="padding-bottom:26px"><h2>${c[0]}</h2><p>${c[1]}</p>
+     <div class="dots">${[0,1,2].map(d=>`<div class="${d===s?'on':''}"></div>`).join("")}</div>
+     ${i<2?`<div class="cta" style="margin-top:10px" onclick="Store.set({obSlide:${i+1}})">Next</div>`
+          :`<div class="cta" style="margin-top:10px" onclick="finishOb()">Find units near me</div>`}
+     </div></div>`).join("")}
+  </div></div>`;
+};
+function finishOb(){Store.tabTo("map");}
+
+/* ---- Map home ---- */
+function pinHtmlSite(s){
+ const fr=freshness(s);
+ return `<div class="pin-u ${fr==='stale'?'stale':(fr==='offline'?'off':'')}" id="pin-${s.id}"><div class="b">${ready(s)}</div><div class="tip"></div></div>`;
+}
+function pinHtmlRP(r){
+ return `<div class="pin-r ${r.type==='Depot'?'depot':''} ${isOpen(r)?'':'closed'}" style="transform:translate(-50%,-50%)">${r.type==='Depot'?I.depot:I.recy}</div>`;
+}
+Views.map=(p)=>{
+ const f=Store.state.filters;
+ const showS=SITES.filter(s=>f.units&&(!f.worth||val(s)>=6));
+ const showR=REFUND_POINTS.filter(r=>r.x!==undefined&&((r.type==="RVM"&&f.rvm)||(r.type==="Depot"&&f.depot))&&(!f.open||isOpen(r)));
+ setTimeout(()=>{ /* after DOM lands, mount Google base if a key is set */
+   const el=$("gmap"); if(!el)return;
+   loadGmaps(ok=>{
+     if(!ok||!$("gmap"))return;
+     $("svgmap").style.display="none"; el.style.display="block";
+     mountGmap(el,[
+       ...showS.map(s=>({ll:SITE_LL[s.id],html:pinHtmlSite(s),onclick:()=>sheetSite(s.id)})),
+       ...showR.filter(r=>RP_LL[r.id]).map(r=>({ll:RP_LL[r.id],html:pinHtmlRP(r),onclick:()=>sheetRP(r.id)})),
+       {ll:HOME,html:'<div class="me" style="transform:translate(-50%,-50%)"></div>'}
+     ]);
+   });
+ },0);
+ return `
+ <div class="sbspace"></div>
+ <div class="apphead">
+   <div class="t">Bin Bypass</div>
+   <div style="display:flex;gap:8px;align-items:center">
+     <div class="badge live" style="font-size:12.5px;padding:7px 12px;cursor:pointer" id="hdr-total" onclick="Store.tabTo('value')">${fmt$(totalReady())} ready</div>
+     ${themeBtn()}
+   </div>
+ </div>
+ <div class="chips">
+   ${[["units","Sites"],["rvm","RVMs"],["depot","Depots"],["open","Open now"],["worth","Worth a trip"]].map(([k,l])=>
+     `<div class="chip ${f[k]?'on':''}" onclick="Store.state.filters.${k}=!Store.state.filters.${k};render()">${l}</div>`).join("")}
+ </div>
+ <div class="maparea" id="maparea" onclick="closeSheet()">
+   <div id="gmap" style="position:absolute;inset:0;display:none"></div>
+   <div id="svgmap" style="position:absolute;inset:0">
+     ${MAPSVG}
+     ${showS.map(s=>{const fr=freshness(s);return `<div class="pin-u ${fr==='stale'?'stale':(fr==='offline'?'off':'')}" id="pin-${s.id}" style="left:${s.x}%;top:${s.y}%" onclick="event.stopPropagation();sheetSite('${s.id}')"><div class="b">${ready(s)}</div><div class="tip"></div></div>`;}).join("")}
+     ${showR.map(r=>`<div class="pin-r ${r.type==='Depot'?'depot':''} ${isOpen(r)?'':'closed'}" style="left:${r.x}%;top:${r.y}%" onclick="event.stopPropagation();sheetRP('${r.id}')">${r.type==='Depot'?I.depot:I.recy}</div>`).join("")}
+     <div class="me" style="left:44%;top:47%"></div>
+   </div>
+   <div class="card legend">
+     <div><span class="dot live"></span>Site · containers ready</div>
+     <div><span class="dot stale"></span>Stale &gt;30 min</div>
+     <div><span style="display:inline-block;width:9px;height:9px;border-radius:3px;background:var(--blue);margin-right:5px"></span>RVM &nbsp;<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--depot);margin-right:5px"></span>Depot</div>
+   </div>
+   <div class="card sheet" id="sheet" onclick="event.stopPropagation()"></div>
+ </div>
+ ${tabbar()}`;
+};
+function closeSheet(){const s=$("sheet");if(s)s.classList.remove("up");document.querySelectorAll(".pin-u").forEach(p=>p.classList.remove("sel"));}
+function sheetSite(id){
+ const s=SITES.find(x=>x.id===id);
+ document.querySelectorAll(".pin-u").forEach(p=>p.classList.remove("sel"));
+ const pe=$("pin-"+id); if(pe)pe.classList.add("sel");
+ $("sheet").innerHTML=`
+  <div style="width:36px;height:4px;border-radius:99px;background:var(--s-line);margin:0 auto 10px"></div>
+  <div class="row">
+    <div><div style="font-size:16.5px;font-weight:800;letter-spacing:-.2px">${s.host}</div>
+    <div style="font-size:12.5px;color:var(--s-muted);margin-top:3px">${statusRow(s)} · ${s.unitCount} units · ${pctFull(s)}% full · ${s.km} km</div></div>
+    <div style="text-align:right"><div class="money" style="font-size:22px">${uval(s)}</div><div style="font-size:11px;color:var(--s-muted)">${ready(s)} of ${capOf(s)}</div></div>
+  </div>
+  <div style="margin-top:10px" class="fullbar"><i style="width:${pctFull(s)}%"></i></div>
+  <div style="display:flex;gap:9px;margin-top:12px">
+    <div class="cta" style="flex:1;padding:12px;font-size:14.5px" onclick="toast('Handing off to Google Maps')">Directions</div>
+    <div class="cta sub" style="flex:1;padding:12px;font-size:14.5px" onclick="Store.go('unit',{id:'${s.id}'})">View site</div>
+  </div>`;
+ $("sheet").classList.add("up");
+}
+function sheetRP(id){
+ const r=REFUND_POINTS.find(x=>x.id===id);
+ document.querySelectorAll(".pin-u").forEach(p=>p.classList.remove("sel"));
+ $("sheet").innerHTML=`
+  <div style="width:36px;height:4px;border-radius:99px;background:var(--s-line);margin:0 auto 10px"></div>
+  <div class="row">
+    <div style="min-width:0"><div style="font-size:16.5px;font-weight:800;letter-spacing:-.2px">${esc(r.name)}</div>
+    <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"><span class="badge blue">${r.type==='RVM'?'Reverse vending machine':(r.type==='Depot'?'Bulk depot':'Over the counter')}</span><span class="badge ${isOpen(r)?'open':'stale'}">${isOpen(r)?'Open now':'Closed'}</span></div></div>
+  </div>
+  <div style="display:flex;gap:9px;margin-top:12px">
+    <div class="cta" style="flex:1;padding:12px;font-size:14.5px" onclick="toast('Handing off to Google Maps')">Directions</div>
+    <div class="cta sub" style="flex:1;padding:12px;font-size:14.5px" onclick="Store.go('refund',{id:'${r.id}'})">Details</div>
+  </div>`;
+ $("sheet").classList.add("up");
+}
+/* ---- Collection value ---- */
+Views.value=()=>{
+ const t=totalReady();
+ const monthCents=Store.state.monthly[5].c;
+ return `
+ <div class="sbspace"></div>
+ <div class="apphead"><div class="t">Collection value</div>${themeBtn()}</div>
+ <div class="scroll">
+  <div class="card" style="padding:17px 18px 16px;border-radius:20px;background:linear-gradient(180deg,var(--green-tint),var(--s-surface) 82%)">
+    <div class="k">Ready now</div>
+    <div class="money" style="font-size:44px;line-height:1.06;margin-top:5px" id="hero">${fmt$(t)}</div>
+    <div style="font-size:13.5px;color:var(--s-muted);margin-top:4px">across <b style="color:var(--s-ink)">${SITES.filter(s=>ready(s)>0).length} sites</b> · <span id="hero-n">${totalCount()}</span> containers · live</div>
+    <div class="cta" style="margin-top:13px;padding:14px" onclick="Store.go('run')">Build a run →</div>
+  </div>
+  <div class="row" style="margin:13px 2px 7px"><div class="k">Your sites · nearest first</div>
+    <div style="font-size:12px;font-weight:700;color:var(--green);cursor:pointer" onclick="Store.go('history')">History →</div></div>
+  <div class="card" style="border-radius:16px;overflow:hidden">
+  ${[...SITES].sort((a,b)=>a.km-b.km).map(s=>`
+    <div class="urow" onclick="Store.go('unit',{id:'${s.id}'})">
+      <div style="min-width:0"><div style="font-size:14.5px;font-weight:700">${s.host}</div>
+      <div style="font-size:12px;color:var(--s-muted);margin-top:2px">${statusRow(s)} · ${ready(s)} of ${capOf(s)} · ${pctFull(s)}% · ${s.km} km</div></div>
+      <div class="money" style="font-size:16px;${freshness(s)!=='live'?'opacity:.75':''}">${uval(s)}</div>
+    </div>`).join("")}
+  </div>
+  <div class="card" style="border-radius:16px;margin-top:11px;padding:13px 15px;display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="Store.go('history')">
+    <div><div style="font-size:13.5px;font-weight:700">August so far</div><div style="font-size:11.5px;color:var(--s-muted)">${Store.state.monthly[5].c/10} containers banked</div></div>
+    <div class="money" style="font-size:18px">${fmt$(monthCents/100)}</div>
+  </div>
+ </div>
+ ${tabbar()}`;
+};
+
+/* ---- My sites ---- */
+Views.myunits=()=>{
+ const claimed=SITES.filter(s=>s.rel==="claimed"), watched=SITES.filter(s=>s.rel==="watched");
+ const row=s=>`
+   <div class="urow" onclick="Store.go('unit',{id:'${s.id}'})">
+     <div style="display:flex;gap:11px;align-items:center;min-width:0">
+       <div style="width:40px;height:40px;border-radius:12px;background:var(--green-tint);display:grid;place-items:center;font-size:18px;flex:0 0 auto">${s.hostEmoji}</div>
+       <div style="min-width:0"><div style="font-size:14.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.host}</div>
+       <div style="font-size:12px;color:var(--s-muted);margin-top:2px">${statusRow(s)} · ${s.unitCount} units · ${pctFull(s)}% full</div></div>
+     </div>
+     <div class="money" style="font-size:16px">${uval(s)}</div>
+   </div>`;
+ return `
+ <div class="sbspace"></div>
+ <div class="apphead"><div class="t">My sites</div>${themeBtn()}</div>
+ <div class="scroll">
+  <div class="k" style="margin:4px 2px 7px">Claimed · you're the collector</div>
+  <div class="card" style="border-radius:16px;overflow:hidden">${claimed.map(row).join("")}</div>
+  <div class="k" style="margin:16px 2px 7px">Watching</div>
+  <div class="card" style="border-radius:16px;overflow:hidden">${watched.map(row).join("")}</div>
+  <div style="display:flex;gap:9px;align-items:center;margin-top:13px;padding:11px 13px;border:1.5px dashed var(--s-line);border-radius:13px;cursor:pointer" onclick="addSiteModal()">
+    <div style="width:22px;height:22px;border-radius:50%;border:2px solid var(--s-muted);display:grid;place-items:center;color:var(--s-muted);font-weight:800;font-size:13px">+</div>
+    <div style="font-size:12.5px;color:var(--s-muted)">Add a site — enter a location or unit number</div>
+  </div>
+ </div>
+ ${tabbar()}`;
+};
+function addSiteModal(){
+ modal(`<div style="font-size:16.5px;font-weight:800">Add a site</div>
+  <div style="font-size:13px;color:var(--s-muted);margin-top:6px">Type a location name, or the unit number printed on any rack (every unit knows its site).</div>
+  <input id="addsite-q" placeholder="e.g. Sandy Bay, or unit 214" style="margin-top:12px;width:100%;padding:13px 14px;border-radius:12px;border:1.5px solid var(--s-line);background:var(--s-bg);color:var(--s-ink);font-size:15px;font-family:inherit;outline:none">
+  <div style="display:flex;gap:9px;margin-top:12px">
+    <div class="cta" style="flex:1;padding:12px;font-size:14px" onclick="addSiteLookup()">Find it</div>
+    <div class="cta sub" style="flex:1;padding:12px;font-size:14px" onclick="closeModal()">Cancel</div>
+  </div>`);
+ setTimeout(()=>{const i=$("addsite-q");if(i)i.focus();},50);
+}
+function addSiteLookup(){
+ const q=($("addsite-q")?$("addsite-q").value:"").trim().toLowerCase();
+ if(!q){toast("Type a location or unit number");return;}
+ const hit=SITES.find(s=>s.host.toLowerCase().includes(q));
+ closeModal();
+ if(hit){hit.rel=hit.rel==="claimed"?"claimed":"watched";toast("Watching "+hit.host);Store.go("unit",{id:hit.id});}
+ else if(/^\d+$/.test(q.replace(/^unit\s*/,""))){toast("Unit "+q.replace(/^unit\s*/,"")+" isn't on the network yet (demo)");}
+ else toast("No site matches “"+q+"” (demo)");
+}
+
+/* ---- Unit detail ---- */
+function spark(s){
+ const seed=ready(s)+s.unitCount; const pts=[]; for(let i=0;i<7;i++){pts.push(8+((seed*(i+3))%29)+(i*2));}
+ pts[6]=Math.max(s.addedToday,2);
+ const max=Math.max(...pts); const xs=pts.map((p,i)=>[8+i*45, 60-((p/max)*44)]);
+ return `<svg viewBox="0 0 288 78" style="width:100%;margin-top:8px">
+  <line x1="0" y1="64" x2="288" y2="64" stroke="var(--s-line)" stroke-width="1"/>
+  <polyline points="${xs.map(p=>p.join(",")).join(" ")}" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="${xs[6][0]}" cy="${xs[6][1]}" r="4.5" fill="var(--green)" stroke="var(--s-surface)" stroke-width="2"/>
+  <text x="${xs[6][0]-8}" y="${Math.min(xs[6][1]+22,60)}" font-size="11.5" font-weight="700" fill="var(--s-ink)" text-anchor="end">${pts[6]} today</text>
+  <text x="8" y="76" font-size="9.5" fill="var(--s-muted)">Wed</text><text x="143" y="76" font-size="9.5" fill="var(--s-muted)" text-anchor="middle">Sat</text><text x="278" y="76" font-size="9.5" fill="var(--s-muted)" text-anchor="end">Today</text>
+ </svg>`;
+}
+Views.unit=(p)=>{
+ const s=SITES.find(x=>x.id===p.id);
+ const claimed=s.rel==="claimed";
+ const ok=s.unitCount-s.sick;
+ return `
+ <div class="sbspace"></div>
+ <div class="apphead">
+   <div class="back" onclick="Store.back()">${I.back}
+     <div style="min-width:0"><div class="t" style="font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.host}</div>
+     <div style="font-size:12px;color:var(--s-muted)">${s.unitCount} units · <span class="badge ${claimed?'live':'grey'}" style="font-size:10.5px;padding:2px 7px">${claimed?"You collect this site":"Watching"}</span></div></div>
+   </div>${themeBtn()}
+ </div>
+ <div class="scroll">
+  <div class="card" style="padding:16px;border-radius:18px">
+    <div class="row" style="align-items:flex-start">
+      <div><div class="k">Ready to collect</div><div class="money" style="font-size:34px;margin-top:4px">${uval(s)}</div>
+      <div style="font-size:12.5px;color:var(--s-muted);margin-top:3px">${ready(s)} of ${capOf(s)} containers · +${s.addedToday} today</div></div>
+      <div class="badge ${freshness(s)==='live'?'live':'stale'}">${statusRow(s)} ago</div>
+    </div>
+    <div style="margin-top:11px" class="fullbar"><i style="width:${pctFull(s)}%"></i></div>
+    <div class="hr"></div>
+    <div class="k" style="margin-bottom:9px">Racks · six containers each · ${s.fills.filter(f=>f>=UNIT_CAP).length} full</div>
+    <div class="ugrid">${s.fills.map((f,n)=>`<div class="ucell ${f>=UNIT_CAP?'full':(f===0?'zero':'')}" title="Unit ${n+1}: ${f}/6"><span>${f}</span><i style="height:${Math.round(f/UNIT_CAP*100)}%"></i></div>`).join("")}</div>
+  </div>
+  <div class="card" style="padding:14px 16px;border-radius:18px;margin-top:11px">
+    <div class="row"><div class="k">This week · containers/day</div></div>
+    ${spark(s)}
+  </div>
+  <div class="card" style="padding:13px 16px;border-radius:18px;margin-top:11px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:32px;height:32px;border-radius:50%;background:${s.sick===0?'var(--green-tint)':'var(--amber-tint)'};display:grid;place-items:center;color:${s.sick===0?'var(--green)':'var(--amber)'}">${s.sick===0?I.tick:I.clock}</div>
+      <div><div style="font-size:14px;font-weight:700">${s.sick===0?"All units healthy":ok+" of "+s.unitCount+" units healthy"}</div><div style="font-size:11.5px;color:var(--s-muted)">${s.sick===0?"Solar charged · strong signal":"We've been notified — nothing for you to do"}</div></div>
+    </div>
+    <div class="hr" style="margin:11px 0"></div>
+    <div class="row" style="font-size:13px"><span style="color:var(--s-muted)">Last emptied</span><b>${s.lastEmptied}${claimed?" · by you":""}</b></div>
+    <div class="row" style="font-size:13px;margin-top:8px"><span style="color:var(--s-muted)">Host</span><b>${s.host} ${s.hostEmoji}</b></div>
+    <div class="row" style="font-size:13px;margin-top:8px"><span style="color:var(--s-muted)">On the fence since</span><b>${s.installed}</b></div>
+  </div>
+  <div style="display:flex;gap:9px;margin-top:12px">
+    <div class="cta" style="flex:1.4;padding:13px;font-size:14px" onclick="toast('Handing off to Google Maps')">Directions · ${s.km} km</div>
+    <div class="cta sub ${ready(s)?'':'dis'}" style="flex:1;padding:13px;font-size:14px" onclick="confirmEmpty('${s.id}')">Mark emptied</div>
+  </div>
+  <div style="display:flex;gap:9px;margin-top:9px">
+    <div class="cta sub" style="flex:1;padding:12px;font-size:13.5px" onclick="toggleRel('${s.id}')">${claimed?"Release claim":"Claim this site"}</div>
+    <div class="cta sub" style="flex:1;padding:12px;font-size:13.5px;display:flex;gap:7px" onclick="Store.go('hostcard',{id:'${s.id}'})">${I.share} Host impact card</div>
+  </div>
+ </div>
+ ${tabbar()}`;
+};
+function toggleRel(id){const s=SITES.find(x=>x.id===id);s.rel=s.rel==="claimed"?"watched":"claimed";toast(s.rel==="claimed"?"Claimed. You're the recognised collector.":"Claim released.");render();}
+function confirmEmpty(id){
+ const s=SITES.find(x=>x.id===id);
+ modal(`<div style="font-size:16.5px;font-weight:800">Mark ${s.host} emptied?</div>
+  <div style="font-size:13px;color:var(--s-muted);margin-top:6px">${ready(s)} containers (${uval(s)}) move to your run history. All ${s.unitCount} racks reset to zero.</div>
+  <div style="display:flex;gap:9px;margin-top:14px">
+    <div class="cta" style="flex:1;padding:12px;font-size:14px" onclick="doEmpty('${s.id}')">Yes, emptied it</div>
+    <div class="cta sub" style="flex:1;padding:12px;font-size:14px" onclick="closeModal()">Cancel</div>
+  </div>`);
+}
+function doEmpty(id){
+ const s=SITES.find(x=>x.id===id);
+ recordCollection([s],"marked emptied");
+ closeModal(); toast("Logged. "+s.host+" reset to zero."); render();
+}
+/* Collection bookkeeping shared by mark-emptied and completed runs */
+function recordCollection(sites,dest){
+ const count=sites.reduce((a,s)=>a+ready(s),0);
+ const cents=count*CENTS;
+ const d=new Date(); const date=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d.getDay()]+" "+d.getDate()+" "+["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()];
+ Store.state.history.unshift({date,units:sites.length,count,cents,dest});
+ Store.state.monthly[5].c+=cents;
+ sites.forEach(s=>{s.fills=Array(s.unitCount).fill(0);s.addedToday=0;s.epoch=nowEpoch();s.lastEmptied=date;});
+}
+/* ---- Run builder ---- */
+const MODES={
+ walk:{label:"walking",carry:150,radius:4,hint:"On foot, about <b>150 containers</b> (two big bags) is a realistic carry.",perkm:14,icon:"walk"},
+ bike:{label:"cycling",carry:300,radius:10,hint:"With panniers or a trailer, about <b>300 containers</b> is comfortable.",perkm:5,icon:"bike"},
+ drive:{label:"driving",carry:Infinity,radius:Infinity,hint:"A van takes the lot. Big loads end at the <b>depot</b>.",perkm:2.2,icon:"car"}
+};
+function defaultSel(){ /* best value per km within mode range, up to the carry limit */
+ const m=MODES[Store.state.mode];
+ const ranked=[...SITES].filter(s=>ready(s)>0&&s.km<=m.radius)
+   .sort((a,b)=>(ready(b)/Math.max(b.km,.5))-(ready(a)/Math.max(a.km,.5)));
+ if(!isFinite(m.carry))return ranked.map(s=>s.id);
+ const sel=[]; let load=0;
+ for(const s of ranked){if(load+ready(s)<=m.carry||sel.length===0){sel.push(s.id);load+=ready(s);}}
+ return sel;
+}
+function setMode(m){Store.state.mode=m;Store.state.runSel=defaultSel();render();}
+function toggleSel(id){const s=Store.state.runSel;const p=s.indexOf(id);if(p>=0)s.splice(p,1);else s.push(id);render();}
+function runDest(cans){
+ const rvms=REFUND_POINTS.filter(r=>r.x!==undefined&&r.type==="RVM");
+ const depot=REFUND_POINTS.find(r=>r.id==="rp31");
+ if(Store.state.mode==="drive"&&cans>=300) return depot;
+ return rvms.find(isOpen)||rvms[0]; /* prefer open; never send a walker to the depot */
+}
+Views.run=()=>{
+ if(!Store.state.runSel)Store.state.runSel=defaultSel();
+ const mode=Store.state.mode;
+ const sel=Store.state.runSel.map(id=>SITES.find(s=>s.id===id)).filter(s=>s&&ready(s)>0).sort((a,b)=>a.km-b.km);
+ const cnt=sel.reduce((a,s)=>a+ready(s),0);
+ const over=isFinite(MODES[mode].carry)&&cnt>MODES[mode].carry;
+ const dest=runDest(cnt);
+ const km=(sel.reduce((a,s)=>a+s.km*0.8,0)+2.2).toFixed(1);
+ const mins=Math.round(km*MODES[mode].perkm+sel.length*6);
+ return `
+ <div class="sbspace"></div>
+ <div class="apphead"><div class="back" onclick="Store.back()">${I.back}<div class="t" style="font-size:19px">Build a run</div></div>${themeBtn()}</div>
+ <div class="scroll">
+  <div class="seg">${Object.keys(MODES).map(m=>`<div class="${mode===m?'on':''}" onclick="setMode('${m}')">${I[MODES[m].icon]}${m[0].toUpperCase()+m.slice(1)}</div>`).join("")}</div>
+  <div style="display:flex;gap:8px;align-items:center;background:var(--green-tint);border-radius:12px;padding:10px 13px;margin-top:10px">
+    <div style="font-size:12.5px;color:var(--s-ink)">${MODES[mode].hint}</div>
+  </div>
+  ${over?`<div style="display:flex;gap:8px;align-items:center;background:var(--amber-tint);border-radius:12px;padding:9px 13px;margin-top:9px"><div style="font-size:12.5px;color:var(--s-ink)">That's <b>${cnt} containers</b> — over a ${MODES[mode].label} carry. Drop a site or switch mode.</div></div>`:""}
+  <div class="k" style="margin:14px 2px 8px">Your route · tap to add or drop</div>
+  <div class="card" style="border-radius:16px;padding:4px 0">
+   ${[...SITES].filter(s=>ready(s)>0).sort((a,b)=>a.km-b.km).map(s=>{
+     const on=Store.state.runSel.includes(s.id); const ord=sel.findIndex(x=>x.id===s.id);
+     return `<div class="runrow ${on?'on':''}" onclick="toggleSel('${s.id}')">
+       ${on?`<div class="stepn">${ord+1}</div>`:`<div class="cb">${I.tick}</div>`}
+       <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;${on?'':'color:var(--s-muted)'}">${s.host}</div>
+       <div style="font-size:11.5px;color:var(--s-muted)">${statusRow(s)} · ${ready(s)} of ${capOf(s)} · ${s.km} km</div></div>
+       <div class="money" style="font-size:15px;${on?'':'opacity:.5'}">${uval(s)}</div></div>`;}).join("")||
+     `<div style="padding:20px;text-align:center;color:var(--s-muted);font-size:13.5px">Nothing to collect right now. Nice work.</div>`}
+   <div style="margin-left:25px;border-left:2px dashed var(--s-line);height:12px"></div>
+   <div style="display:flex;gap:12px;padding:11px 14px 13px;align-items:center;background:var(--blue-tint);border-radius:0 0 16px 16px;cursor:pointer" onclick="Store.go('refund',{id:'${dest.id}'})">
+     <div class="stepn" style="background:${dest.type==='Depot'?'var(--depot)':'var(--blue)'}"><span style="font-size:11px">${dest.type==='Depot'?'D':'R'}</span></div>
+     <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700">Cash in · ${esc(dest.name)}</div>
+     <div style="font-size:11.5px;color:var(--s-muted)"><span class="badge ${isOpen(dest)?'open':'stale'}" style="font-size:10px;padding:1.5px 6px">${isOpen(dest)?'Open':'Closed'}</span> · ${RP_HOURS[dest.type].label}</div></div>
+   </div>
+  </div>
+  <div class="card" style="border-radius:16px;margin-top:11px;padding:13px 15px">
+    <div class="row" style="text-align:center">
+      <div style="flex:1"><div class="money" style="font-size:20px">${fmt$(cnt*CENTS/100)}</div><div style="font-size:10.5px;color:var(--s-muted)">${cnt} containers</div></div>
+      <div style="width:1px;height:32px;background:var(--s-line)"></div>
+      <div style="flex:1"><div style="font-size:20px;font-weight:800">${km} km</div><div style="font-size:10.5px;color:var(--s-muted)">approx, ${MODES[mode].label}</div></div>
+      <div style="width:1px;height:32px;background:var(--s-line)"></div>
+      <div style="flex:1"><div style="font-size:20px;font-weight:800">~${mins} min</div><div style="font-size:10.5px;color:var(--s-muted)">door to payout</div></div>
+    </div>
+  </div>
+  <div class="cta ${sel.length&&!over?'':'dis'}" style="margin-top:13px" onclick="startRun()">Start run in Google Maps · ${MODES[mode].label}</div>
+  <div style="font-size:11px;color:var(--s-muted);text-align:center;margin-top:9px">Distances and times are estimates. Route opens in Google Maps.</div>
+ </div>
+ ${tabbar()}`;
+};
+function startRun(){
+ const sel=Store.state.runSel.map(id=>SITES.find(s=>s.id===id)).filter(s=>s&&ready(s)>0);
+ if(!sel.length)return;
+ const cans=sel.reduce((a,s)=>a+ready(s),0);
+ const dest=runDest(cans);
+ const cents=cans*CENTS;
+ modal(`<div style="font-size:16.5px;font-weight:800">Run started</div>
+  <div style="font-size:13px;color:var(--s-muted);margin-top:6px">Handing the route to Google Maps. When you've cashed in at ${esc(dest.name)}, come back and finish the run to log <b class="money">${fmt$(cents/100)}</b>.</div>
+  <div style="display:flex;gap:9px;margin-top:14px">
+    <div class="cta" style="flex:1;padding:12px;font-size:14px" onclick="finishRun()">Finish run · log ${fmt$(cents/100)}</div>
+    <div class="cta sub" style="flex:1;padding:12px;font-size:14px" onclick="closeModal()">Later</div>
+  </div>`);
+}
+function finishRun(){
+ const sel=Store.state.runSel.map(id=>SITES.find(s=>s.id===id)).filter(s=>s&&ready(s)>0);
+ const cans=sel.reduce((a,s)=>a+ready(s),0);
+ const dest=runDest(cans);
+ recordCollection(sel,dest.name);
+ Store.state.runSel=null;
+ closeModal();
+ Store.go("history"); toast("Run banked. Well earned.");
+}
+
+/* ---- Refund point detail ---- */
+Views.refund=(p)=>{
+ const r=REFUND_POINTS.find(x=>x.id===p.id);
+ const open=isOpen(r);
+ const depot=REFUND_POINTS.find(x=>x.id==="rp31");
+ return `
+ <div class="sbspace"></div>
+ <div class="apphead"><div class="back" onclick="Store.back()">${I.back}<div class="t" style="font-size:19px">Refund point</div></div>${themeBtn()}</div>
+ <div class="scroll">
+  <div class="card" style="padding:16px;border-radius:18px">
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <div style="width:44px;height:44px;border-radius:${r.type==='Depot'?'50%':'12px'};background:${r.type==='Depot'?'var(--depot)':'var(--blue)'};display:grid;place-items:center;flex:0 0 auto">${r.type==='Depot'?I.depot:I.recy}</div>
+      <div style="min-width:0">
+        <div style="font-size:17px;font-weight:800;letter-spacing:-.2px">${esc(r.name)}</div>
+        <div style="font-size:12.5px;color:var(--s-muted);margin-top:3px">${esc(r.addr)} · ${r.region}</div>
+        <div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap"><span class="badge blue">${r.type==='RVM'?'Reverse vending machine':(r.type==='Depot'?'Bulk depot':'Over the counter')}</span><span class="badge ${open?'open':'stale'}">${open?'Open now':'Closed'}</span></div>
+      </div>
+    </div>
+    <div class="hr"></div>
+    <div class="row" style="font-size:13px"><span style="color:var(--s-muted)">Hours</span><b>${RP_HOURS[r.type].label}</b></div>
+    ${r.x!==undefined?`<div class="row" style="font-size:13px;margin-top:8px"><span style="color:var(--s-muted)">Region</span><b>Greater Hobart</b></div>`:""}
+  </div>
+  <div class="card" style="padding:15px 16px;border-radius:18px;margin-top:11px">
+    ${r.type!=="Depot"?`
+    <div class="k" style="margin-bottom:10px">Feed the right hole</div>
+    <div style="display:flex;gap:9px">
+      <div style="flex:1;border:1.5px solid var(--s-line);border-radius:13px;padding:12px 10px;text-align:center"><div style="font-size:22px">🫙</div><div style="font-size:13px;font-weight:700;margin-top:4px">Glass</div><div style="font-size:11px;color:var(--s-muted)">own chute</div></div>
+      <div style="flex:1;border:1.5px solid var(--s-line);border-radius:13px;padding:12px 10px;text-align:center"><div style="font-size:22px">🥫</div><div style="font-size:13px;font-weight:700;margin-top:4px">Plastic &amp; cans</div><div style="font-size:11px;color:var(--s-muted)">shared chute</div></div>
+    </div>
+    <div class="hr"></div>`:`
+    <div class="k" style="margin-bottom:8px">Bulk loads</div>
+    <div style="font-size:13px;color:var(--s-muted);line-height:1.5;margin-bottom:4px">No feeding machines one can at a time. Drop bags or bins on the scale, staff count and pay.</div>
+    <div class="hr"></div>`}
+    <div class="k" style="margin-bottom:8px">Getting paid</div>
+    <div style="display:flex;gap:8px;align-items:center;font-size:13px;margin-bottom:7px;color:var(--green)">${I.tick}<span style="color:var(--s-ink)">Retail voucher — redeem or cash out in store</span></div>
+    ${r.digital?`<div style="display:flex;gap:8px;align-items:center;font-size:13px;color:var(--green)">${I.tick}<span style="color:var(--s-ink)">Digital voucher — straight to your scheme account</span></div>`
+               :`<div style="display:flex;gap:8px;align-items:center;font-size:13px;color:var(--amber)">${I.clock}<span style="color:var(--s-ink)">Digital voucher not available at this site</span></div>`}
+    ${r.type!=="Depot"?`<div style="margin-top:10px;font-size:11.5px;color:var(--s-muted);background:var(--s-bg);border-radius:10px;padding:9px 11px">Hauling a big load? The nearest depot takes bulk: <b style="color:var(--s-ink);cursor:pointer" onclick="Store.go('refund',{id:'rp31'})">${esc(depot.name)}</b>, ${RP_HOURS.Depot.label}.</div>`:""}
+  </div>
+  <div style="display:flex;gap:9px;margin-top:12px">
+    <div class="cta" style="flex:1.4;padding:13px;font-size:14px" onclick="toast('Handing off to Google Maps')">Directions</div>
+    <div class="cta sub" style="flex:1;padding:13px;font-size:14px" onclick="Store.go('refundlist')">All 51 points</div>
+  </div>
+ </div>
+ ${tabbar()}`;
+};
+
+/* ---- All refund points (grouped by region) ---- */
+Views.refundlist=()=>{
+ const regions=[...new Set(REFUND_POINTS.map(r=>r.region))].sort((a,b)=>a==="Hobart"?-1:(b==="Hobart"?1:a.localeCompare(b)));
+ return `
+ <div class="sbspace"></div>
+ <div class="apphead"><div class="back" onclick="Store.back()">${I.back}<div class="t" style="font-size:19px">Refund points · 51</div></div>${themeBtn()}</div>
+ <div class="scroll">
+  ${regions.map(reg=>`
+   <div class="k" style="margin:10px 2px 7px">${reg} · ${REFUND_POINTS.filter(r=>r.region===reg).length}</div>
+   <div class="card" style="border-radius:16px;overflow:hidden">
+    ${REFUND_POINTS.filter(r=>r.region===reg).map(r=>`
+      <div class="urow" onclick="Store.go('refund',{id:'${r.id}'})">
+        <div style="min-width:0"><div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.name)}</div>
+        <div style="font-size:11.5px;color:var(--s-muted);margin-top:2px">${r.type} · ${isOpen(r)?'<span style="color:var(--green);font-weight:700">Open</span>':'Closed'}${r.digital?'':' · voucher only'}</div></div>
+        <div style="color:var(--s-muted)">›</div>
+      </div>`).join("")}
+   </div>`).join("")}
+ </div>
+ ${tabbar()}`;
+};
+/* ---- CDS insights (scheme analytics) ---- */
+const CDS_METRICS={
+ full:  {label:"% of time units are full", unit:"%",  key:"full",   betterHigh:false,
+         note:"Time spent full is money waiting on a fence. Taroona sits full 41% of the week — it needs more racks or a second collector."},
+ turn:  {label:"Total containers turned per unit", unit:"/wk", key:"turn", betterHigh:true,
+         note:"Containers through each rack per week. Sandy Bay's racks turn 41 containers a week each — the network's benchmark."},
+ contam:{label:"Likely contamination ratio", unit:"%", key:"contam", betterHigh:false,
+         note:"Modelled from sensor patterns (weight and optics anomalies), verified at cash-in. Moonah's 5.2% is worth a bin-signage fix."}
+};
+Views.cds=()=>{
+ const mk=Store.state.cdsMetric, M=CDS_METRICS[mk];
+ const rows=[...SITES].sort((a,b)=>M.betterHigh?(b.stat[M.key]-a.stat[M.key]):(a.stat[M.key]-b.stat[M.key]));
+ const ranked=M.betterHigh?rows:[...rows].reverse();           /* chart order: biggest bar first */
+ const best=M.betterHigh?ranked[0]:ranked[ranked.length-1];    /* best performer for the callout */
+ const maxV=Math.max(...SITES.map(s=>s.stat[M.key]));
+ const feedMax=Math.max(...RVM_FEED.map(f=>f.month));
+ const feedTotal=RVM_FEED.reduce((a,f)=>a+f.month,0);
+ const cycles=[...SITES].sort((a,b)=>a.stat.cycle-b.stat.cycle);
+ const netFull=Math.round(SITES.reduce((a,s)=>a+s.stat.full*s.unitCount,0)/SITES.reduce((a,s)=>a+s.unitCount,0));
+ return `
+ <div class="sbspace"></div>
+ <div class="apphead"><div class="t">CDS insights</div>${themeBtn()}</div>
+ <div class="scroll">
+  <div style="display:flex;gap:8px">
+    <div class="card" style="flex:1;padding:11px 12px;border-radius:14px"><div class="money" style="font-size:19px">${feedTotal.toLocaleString()}</div><div style="font-size:10.5px;color:var(--s-muted);margin-top:2px">containers fed to RVMs this month</div></div>
+    <div class="card" style="flex:1;padding:11px 12px;border-radius:14px"><div style="font-size:19px;font-weight:800">${SITES.reduce((a,s)=>a+s.unitCount,0)} racks</div><div style="font-size:10.5px;color:var(--s-muted);margin-top:2px">across ${SITES.length} sites · ${netFull}% avg time full</div></div>
+  </div>
+  <div class="k" style="margin:15px 2px 8px">Site performance</div>
+  <div class="card" style="padding:14px 16px 12px;border-radius:18px">
+    <div class="chips" style="padding:0 0 11px;margin:0 -2px">
+      ${Object.keys(CDS_METRICS).map(k=>`<div class="chip ${mk===k?'on':''}" style="font-size:11.5px;padding:8px 11px" onclick="Store.set({cdsMetric:'${k}'})">${CDS_METRICS[k].label}</div>`).join("")}
+    </div>
+    ${ranked.map(s=>{const v=s.stat[M.key];const isBest=s.id===best.id;return `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;cursor:pointer" onclick="Store.go('unit',{id:'${s.id}'})">
+        <div style="width:86px;font-size:11.5px;font-weight:700;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.area}</div>
+        <div style="flex:1" class="fullbar"><i style="width:${Math.round(v/maxV*100)}%;${mk==='contam'?'background:var(--amber)':''};opacity:${isBest?1:.55}"></i></div>
+        <div style="width:52px;font-size:12px;font-weight:800;font-variant-numeric:tabular-nums">${v}${M.unit}</div>
+      </div>`;}).join("")}
+    <div style="font-size:11.5px;color:var(--s-muted);line-height:1.5;border-top:1px solid var(--s-line);padding-top:10px;margin-top:3px">
+      <b style="color:var(--s-ink)">Highest performing area: ${best.area}.</b> ${M.note}</div>
+  </div>
+  <div class="k" style="margin:15px 2px 8px">RVM feed stats · this month</div>
+  <div class="card" style="padding:14px 16px 8px;border-radius:18px">
+    ${RVM_FEED.map(f=>{const r=REFUND_POINTS.find(x=>x.id===f.rp);const up=f.wk[3]>=f.wk[0];return `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;cursor:pointer" onclick="Store.go('refund',{id:'${f.rp}'})">
+        <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.name)}</div>
+          <div style="margin-top:4px" class="fullbar"><i style="width:${Math.round(f.month/feedMax*100)}%;background:var(--blue)"></i></div></div>
+        <div style="width:74px;text-align:right"><div style="font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums">${f.month.toLocaleString()}</div>
+          <div style="font-size:10px;color:${up?'var(--green)':'var(--s-muted)'}">${up?"▲":"▼"} wk ${f.wk[3]} · ${Math.round(f.month/feedTotal*100)}% share</div></div>
+      </div>`;}).join("")}
+  </div>
+  <div class="k" style="margin:15px 2px 8px">Fastest turn cycles</div>
+  <div class="card" style="border-radius:16px;overflow:hidden">
+    ${cycles.slice(0,3).map((s,i)=>`
+      <div class="urow" onclick="Store.go('unit',{id:'${s.id}'})">
+        <div style="display:flex;gap:11px;align-items:center;min-width:0">
+          <div class="stepn" style="${i>0?'background:var(--s-bg);color:var(--s-muted);border:1px solid var(--s-line)':''}">${i+1}</div>
+          <div style="min-width:0"><div style="font-size:14px;font-weight:700">${s.host}</div>
+          <div style="font-size:11.5px;color:var(--s-muted);margin-top:2px">fills every ${s.stat.cycle} days · ${Math.round(30/s.stat.cycle)} turns/month</div></div>
+        </div>
+        <div style="font-size:12.5px;font-weight:800;color:var(--green)">${s.stat.cycle}d</div>
+      </div>`).join("")}
+  </div>
+  <div style="font-size:11px;color:var(--s-muted);text-align:center;margin:12px 4px 4px;line-height:1.5">Contamination is a modelled estimate, confirmed when loads are cashed in. All figures simulated in this build.</div>
+ </div>
+ ${tabbar()}`;
+};
+
+/* ---- History & impact ---- */
+Views.history=()=>{
+ const st=Store.state; const charity=st.account==="charity";
+ const max=Math.max(...st.monthly.map(m=>m.c));
+ const best=st.history.reduce((b,h)=>h.cents>(b?b.cents:0)?h:b,null);
+ const lifetime=st.monthly.reduce((s,m)=>s+m.c,0);
+ return `
+ <div class="sbspace"></div>
+ <div class="apphead"><div class="back" onclick="Store.back()">${I.back}<div class="t" style="font-size:19px">History</div></div>${themeBtn()}</div>
+ <div class="scroll">
+  <div class="seg" style="margin-bottom:11px">
+    <div class="${charity?'':'on'}" onclick="Store.set({account:'personal'})">You</div>
+    <div class="${charity?'on':''}" onclick="Store.set({account:'charity'})">Sandy Bay Scouts</div>
+  </div>
+  <div class="card" style="padding:17px 18px 15px;border-radius:20px;background:linear-gradient(180deg,var(--green-tint),var(--s-surface) 82%)">
+    <div class="k">${charity?"Raised for Sandy Bay Scouts":"Banked"} · August</div>
+    <div class="money" style="font-size:40px;line-height:1.08;margin-top:5px">${fmt$(st.monthly[5].c/100)}</div>
+    <div style="font-size:13.5px;color:var(--s-muted);margin-top:4px">${(st.monthly[5].c/10).toLocaleString()} containers · ${st.history.filter(h=>h.date.includes("Aug")).length} runs this month</div>
+  </div>
+  <div class="card" style="padding:15px 16px 12px;border-radius:18px;margin-top:11px">
+    <div class="row"><div class="k">${charity?"Raised":"Banked"} per month</div><div style="font-size:11.5px;color:var(--s-muted)">Mar – Aug 2026</div></div>
+    <div class="bars">
+      ${st.monthly.map((m,i)=>`<div class="bar ${i===5?'cur':''}">${i===5?`<b>${fmt$(m.c/100).replace(/\.\d\d$/,"")}</b>`:""}<i style="height:${Math.round(m.c/max*72)}%"></i><span>${m.m}</span></div>`).join("")}
+    </div>
+  </div>
+  <div class="card" style="padding:13px 16px;border-radius:18px;margin-top:11px">
+    <div class="row">
+      <div style="display:flex;gap:10px;align-items:center">
+        <div style="width:30px;height:30px;border-radius:50%;background:var(--amber-tint);display:grid;place-items:center;font-size:15px">🏅</div>
+        <div><div style="font-size:13.5px;font-weight:700">Personal best run</div><div style="font-size:11.5px;color:var(--s-muted)">${best.date} · ${best.units} units + ${best.dest}</div></div>
+      </div>
+      <div class="money" style="font-size:16px">${fmt$(best.cents/100)}</div>
+    </div>
+    <div class="hr" style="margin:10px 0"></div>
+    <div class="row" style="font-size:13px"><span style="color:var(--s-muted)">Since March</span><b>${(lifetime/10).toLocaleString()} containers · <span class="money" style="font-size:13px">${fmt$(lifetime/100)}</span></b></div>
+  </div>
+  <div class="k" style="margin:15px 2px 7px">Runs</div>
+  <div class="card" style="border-radius:16px;overflow:hidden">
+   ${st.history.map(h=>`
+    <div class="urow" style="cursor:default">
+      <div><div style="font-size:14px;font-weight:700">${h.date}${h.best?' 🏅':''}</div>
+      <div style="font-size:11.5px;color:var(--s-muted);margin-top:2px">${h.units} site${h.units>1?'s':''} · ${h.count} containers · ${esc(h.dest)}</div></div>
+      <div class="money" style="font-size:15px">+${fmt$(h.cents/100)}</div>
+    </div>`).join("")}
+  </div>
+ </div>
+ ${tabbar()}`;
+};
+
+/* ---- Host impact card ---- */
+Views.hostcard=(p)=>{
+ const u=UNITS.find(x=>x.id===p.id);
+ const raised=Math.round(u.lifetime*CENTS/100);
+ return `
+ <div class="sbspace"></div>
+ <div class="apphead"><div class="back" onclick="Store.back()">${I.back}<div class="t" style="font-size:19px">Host impact</div></div>${themeBtn()}</div>
+ <div class="scroll">
+  <div class="hostcard">
+    <div class="inner">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="display:flex;align-items:center;gap:9px"><div style="width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.16);display:grid;place-items:center;font-weight:800;font-size:11px;color:#fff">BB</div><b style="font-size:14px">Bin Bypass host</b></div>
+        <span style="font-size:11px;opacity:.75">since ${u.installed}</span>
+      </div>
+      <div style="font-size:23px;font-weight:800;letter-spacing:-.4px;margin-top:20px;line-height:1.25">${u.host} ${u.hostEmoji}</div>
+      <div style="margin-top:19px;display:flex;gap:10px">
+        <div style="flex:1.2;background:rgba(255,255,255,.12);border-radius:14px;padding:12px 13px">
+          <div style="font-size:23px;font-weight:800;font-variant-numeric:tabular-nums">${u.lifetime.toLocaleString()}</div>
+          <div style="font-size:10.5px;opacity:.85;margin-top:2px">containers kept out of landfill</div>
+        </div>
+        <div style="flex:1;background:rgba(255,255,255,.12);border-radius:14px;padding:12px 13px">
+          <div style="font-size:23px;font-weight:800;font-variant-numeric:tabular-nums">$${raised.toLocaleString()}</div>
+          <div style="font-size:10.5px;opacity:.85;margin-top:2px">raised on their fence</div>
+        </div>
+      </div>
+      <div style="margin-top:17px;font-size:11.5px;opacity:.8">Collected by ${Store.state.account==='charity'?'Sandy Bay Scouts':'a local collector'} · binbypass.com</div>
+    </div>
+  </div>
+  <div style="font-size:12px;color:var(--s-muted);text-align:center;margin-top:13px">Shares as an image — clubhouse noticeboards, newsletters, Facebook</div>
+  <div style="display:flex;gap:9px;margin-top:12px">
+    <div class="cta" style="flex:1.4;padding:13px;font-size:14px;display:flex;gap:8px" onclick="shareCard('${u.id}')">${I.share} Share card</div>
+    <div class="cta sub" style="flex:1;padding:13px;font-size:14px" onclick="toast('Saved to Photos')">Save image</div>
+  </div>
+ </div>
+ ${tabbar()}`;
+};
+function shareCard(id){
+ const u=UNITS.find(x=>x.id===id);
+ const text=`${u.host} hosts a Bin Bypass unit: ${u.lifetime.toLocaleString()} containers kept out of landfill, $${Math.round(u.lifetime*CENTS/100).toLocaleString()} raised. binbypass.com`;
+ if(navigator.share){navigator.share({title:"Bin Bypass host impact",text}).catch(()=>{});}
+ else toast("Share sheet (on device)");
+}
+
+/* ============================ ROUTER / RENDER ============================ */
+function render(){
+ const sc=Store.state.screen;
+ const view=Views[sc.name]||Views.map;
+ $("view").innerHTML=view(sc.params);
+}
+/* ============================ LIVE FEED WIRING ============================ */
+Feed.subscribe(ev=>{
+ if(ev.type==="packet"){
+   const pin=$("pin-"+ev.site.id);
+   if(pin){pin.querySelector(".b").textContent=ready(ev.site);pin.classList.add("pulse");setTimeout(()=>pin.classList.remove("pulse"),2000);
+     const ht=$("hdr-total"); if(ht)ht.textContent=fmt$(totalReady())+" ready";}
+   else if(["value","unit","run","myunits"].includes(Store.state.screen.name)){render();}
+ }
+ if(ev.type==="clock"&&["map","value","myunits"].includes(Store.state.screen.name)){render();}
+ if(ev.type==="notify"){
+   const s=ev.site;
+   $("notif").innerHTML=`
+    <div style="width:38px;height:38px;border-radius:11px;background:var(--green-cta);display:grid;place-items:center;color:var(--green-ink-on);font-weight:800;font-size:12px;flex:0 0 auto">BB</div>
+    <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:700">${s.host} is ${pctFull(s)}% full</div>
+    <div style="font-size:12px;color:var(--s-muted)">${ready(s)} containers · ${uval(s)} ready · ${s.km} km away · Worth a trip</div></div>
+    <div style="font-size:11px;color:var(--s-muted)">now</div>`;
+   $("notif").classList.add("show");
+   $("notif").onclick=()=>{$("notif").classList.remove("show");Store.go("unit",{id:s.id});};
+   setTimeout(()=>$("notif").classList.remove("show"),7000);
+ }
+});
+/* ============================ BOOT ============================ */
+if(window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches)document.body.dataset.theme="dark";
+$("modalbg").onclick=e=>{if(e.target.id==="modalbg")closeModal();};
+render();
+Feed.start();
+</script>
+</body>
+</html>
